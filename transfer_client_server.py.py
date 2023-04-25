@@ -1,5 +1,34 @@
+import socket
+import time
+import argparse
+import sys
+
+
 # SAFR  - sending an ack flag = 4
 # S - sin (8)
 # A - ack (4)
 # F - flag (2)
 # R - resive window(1)
+
+def client():
+    clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
+    serverAddr = (serverip, port)
+    try:
+        clientSocket.connect(serverAddr)
+
+    except ConnectionError as e:
+        print(e)
+        sys.exit()    
+
+def server():
+    serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        serverSocket.bind((ip, port))
+    except:
+        print("bind failed")
+        sys.exit()
+
+    serverSocket.listen() # skal denne være her? og skal den være med?
+
+    connectionSocket, addr = serverSocket.accept()        
+
