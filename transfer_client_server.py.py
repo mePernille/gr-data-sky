@@ -28,7 +28,7 @@ def server():
         print("bind failed")
         sys.exit()
 
-    serverSocket.listen() # skal denne være her? og skal den være med?
+    serverSocket.listen()
 
     connectionSocket, addr = serverSocket.accept()        
 
