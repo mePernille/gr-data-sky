@@ -37,6 +37,9 @@ def main():
     parser = argparse.ArgumentParser(description="Reliable Transport Protocol", epilog="End of thelp")
 
     
+    if args.server and args.client:
+        print("you must either run the server or the client")
+        sys.exit()
 
 
 
