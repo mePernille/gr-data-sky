@@ -88,18 +88,6 @@ def handle_client(connectionSocket, addr):
 
 
 
-
- <<<<<<< Karoline
-    #let's extract the data_from_msg that holds
-    #the application data of 1460 bytes
-    data_from_msg = msg[12:]
-    print (len(data_from_msg))
-
-=======
-    >>>>>>> master
-
-
-
 def main():
 
     parser = argparse.ArgumentParser(description="Reliable Transport Protocol", epilog="End of thelp")
