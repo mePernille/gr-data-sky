@@ -2,6 +2,7 @@ import socket
 import time
 import argparse
 import sys
+from header import *
 
 
 # SAFR  - sending an ack flag = 4
@@ -21,17 +22,28 @@ def client():
         sys.exit()    
 
 def server():
+    Addr = ('127.0.0.1', 8083)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        serverSocket.bind((ip, port))
+        serverSocket.bind(Addr)
     except:
         print("bind failed")
         sys.exit()
 
-# hei
     serverSocket.listen()
+    print(f"Server is listening")
 
-    connectionSocket, addr = serverSocket.accept()        
+    while True:
+        connectionSocket, addr = serverSocket.accept()
+        handle_client(connectionSocket, addr)    
+    serverSocket.close()
+
+def handle_client(connectionSocket, addr):
+    
+
+
+
+
 
 def main():
 
