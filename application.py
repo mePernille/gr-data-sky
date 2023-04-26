@@ -2,7 +2,6 @@ import socket
 import time
 import argparse
 import sys
-from header import *
 from struct import *
 
 
@@ -27,24 +26,23 @@ def client():
     acknowledgment_number = 0
     window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
     flags = 0 # we are not going to set any flags when we send a data packet
-    create_packet(sequence_number,  acknowledgment_number, flags, window, data)
-    create_packet.send(24000)      
+    packet = create_packet(sequence_number,  acknowledgment_number, flags, window, data)
+    clientSocket.send(packet)      
 
 def server():
-    Addr = ('127.0.0.1', 8083)
+    addr = ('127.0.0.1', 8083)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        serverSocket.bind(Addr)
+        serverSocket.bind(addr)
     except:
         print("bind failed")
         sys.exit()
 
-    serverSocket.listen()
     print(f"Server is listening")
 
     while True:
-        connectionSocket, addr = serverSocket.accept()
-        handle_client(connectionSocket, addr)    
+        msg, clientAddr = serverSocket.recvfrom(1472)
+        handle_client(msg, clientAddr) 
     serverSocket.close()
 
 
@@ -56,8 +54,8 @@ def create_packet(seq, ack, flags, win, data):
 
     return packet  
 
-def handle_client(connectionSocket, addr):
-    msg = connectionSocket.recv(1472)
+def handle_client(msg, clientAddr):
+    #msg = connectionSocket.recv(1472)
     #now let's look at the header
     #we already know that the header is in the first 12 bytes
 
@@ -67,7 +65,7 @@ def handle_client(connectionSocket, addr):
     #now we get the header from the parse_header function
     #which unpacks the values based on the header_format that 
     #we specified
-    seq, ack, flags, win = parse_header (header_from_msg)
+    seq, ack, flags, win = unpack(header_format, header_from_msg)
     print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
 
     #now let's parse the flag field
@@ -83,10 +81,20 @@ def handle_client(connectionSocket, addr):
     if fin == 1:
         print("this is a fin packet")
 
-    else:
+    elif syn != 1 and ack != 1 and fin != 1:
         print("no flags are set")
 
+    # Motta data fra klient
+    data = msg[12:]
+    print(f"Mottatt {len(data)} bytes med data")
 
+def parse_flags(flags):
+    #we only parse the first 3 fields because we're not 
+    #using rst in our implementation
+    syn = flags & (1 << 3)
+    ack = flags & (1 << 2)
+    fin = flags & (1 << 1)
+    return syn, ack, fin
 
 
 def main():
@@ -99,12 +107,15 @@ def main():
 
     args = parser.parse_args()
 
-    if args.server and args.client:
-        print("you must either run the server or the client")
-        sys.exit()
-
     if args.server:
-        server(args.server)
+        server()
+    
+    elif args.client:
+        client()
+    
+    else:
+        print("You need to specify either -s or -c")
+        sys.exit()
 
 
 
