@@ -57,9 +57,46 @@ def create_packet(seq, ack, flags, win, data):
     return packet  
 
 def handle_client(connectionSocket, addr):
-    
+    msg = connectionSocket.recv(1472)
+    #now let's look at the header
+    #we already know that the header is in the first 12 bytes
 
+    header_from_msg = msg[:12]
+    print(len(header_from_msg))
+
+    #now we get the header from the parse_header function
+    #which unpacks the values based on the header_format that 
+    #we specified
+    seq, ack, flags, win = parse_header (header_from_msg)
+    print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
+
+    #now let's parse the flag field
+    syn, ack, fin = parse_flags(flags)
+    print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
+
+    if syn == 1:
+        print("this is a syn packet")
     
+    if ack == 1:
+        print("this is an ack packet")
+    
+    if fin == 1:
+        print("this is a fin packet")
+
+    else:
+        print("no flags are set")
+
+
+
+
+ <<<<<<< Karoline
+    #let's extract the data_from_msg that holds
+    #the application data of 1460 bytes
+    data_from_msg = msg[12:]
+    print (len(data_from_msg))
+
+=======
+    >>>>>>> master
 
 
 
