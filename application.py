@@ -28,6 +28,7 @@ def server():
         print("bind failed")
         sys.exit()
 
+# hei
     serverSocket.listen()
 
     connectionSocket, addr = serverSocket.accept()        
