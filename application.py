@@ -13,9 +13,9 @@ import re
 header_format = '!IIHH'
 
 
-def client(reli):
+def client(ip, port, file, reli):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
-    serverAddr = ('127.0.0.1', 8083)
+    serverAddr = (ip, port)
     try:
         clientSocket.connect(serverAddr)
 
