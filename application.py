@@ -96,6 +96,31 @@ def parse_flags(flags):
     fin = flags & (1 << 1)
     return syn, ack, fin
 
+def check_ip(addres):
+    try:
+        ipValue = str(addres)
+    except:
+        raise argparse.ArgumentError('must be different format')
+    #https://www.abstractapi.com/guides/python-regex-ip-address
+    match = re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ipValue)
+    if not match:
+        print("You must enter a valid Ip address")
+        sys.exit() # when IP not valid the system will exit. 
+    else:
+        return ipValue
+    
+def check_port(valu): 
+    try:
+        value = int(valu) #testing the port value
+    except ValueError:
+        raise argparse.ArgumentTypeError('expected an interger!')
+    if (value < 1024 ): 
+        print('port must be above 1024')
+        
+    elif(value > 65535):
+        print("port must be les then 65535")    
+    else:
+        return value 
 
 def main():
 
@@ -103,6 +128,10 @@ def main():
 
     parser.add_argument('-s', '--server', action='store_true')
     parser.add_argument('-c', '--client', action='store_true')
+    parser.add_argument('-i', '--ip', type=check_ip, default='127.0.0.1')
+    parser.add_argument('-p','--port', type=check_port, default=8083)
+    parser.add_argument('-f','--file')
+    parser.add_argument('-r', '--reliability', type=str, choices=['stop_and_wait','GBN()','SR()'])
     
 
     args = parser.parse_args()
