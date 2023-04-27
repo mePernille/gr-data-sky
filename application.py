@@ -81,21 +81,17 @@ def server(ip, port, reli):
         #which unpacks the values based on the header_format that 
         #we specified
         seq, ack, flags, win = unpack(header_format, header_from_msg)
-        print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
+        #print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
 
         #now let's parse the flag field
         syn, ack, fin = parse_flags(flags)
-        print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
+        #print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
 
         if syn == 8:
-            print("this is a syn packet")
-            #let's mimic an acknowledgment packet from the receiver-end
-            #now let's create a packet with acknowledgement number 1
+            print("received syn packet")
             #an acknowledgment packet from the receiver should have no data
             #only the header with acknowledgment number, ack_flag=1, win=6400
             data = b''
-            print('\n\nCreating an acknowledgment packet:')
-            print (f'this is an empty packet with no data ={len(data)}')
 
             sequence_number = 0
             acknowledgment_number = 1   #an ack for the last sequence
@@ -108,22 +104,22 @@ def server(ip, port, reli):
             flags = 12 # we are setting the ack and syn flags
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, data)
-            print (f'this is an acknowledgment packet of header size={len(msg)}')
+            print (f'sending an acknowledgment packet of header size={len(msg)}')
             serverSocket.sendto(synAck, clientAddr) # send the packet to the client
 
         
         if ack == 4:
-            print("this is an ack packet")
+            print("received ack packet")
         
         if fin == 2:
-            print("this is a fin packet")
+            print("received fin packet")
 
         elif syn != 8 and ack != 4 and fin != 2:
             print("no flags are set")
 
         # Motta data fra klient
         data = msg[12:]
-        print(f"Mottatt {len(data)} bytes med data")
+        print(f"Received {len(data)} bytes of data")
             
 
 
