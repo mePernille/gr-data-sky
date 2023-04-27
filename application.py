@@ -86,6 +86,27 @@ def handle_client(msg, clientAddr):
 
     if syn == 1:
         print("this is a syn packet")
+        #let's mimic an acknowledgment packet from the receiver-end
+        #now let's create a packet with acknowledgement number 1
+        #an acknowledgment packet from the receiver should have no data
+        #only the header with acknowledgment number, ack_flag=1, win=6400
+        data = b''
+        print('\n\nCreating an acknowledgment packet:')
+        print (f'this is an empty packet with no data ={len(data)}')
+
+        sequence_number = 0
+        acknowledgment_number = 1   #an ack for the last sequence
+        window = 0 # window value should always be sent from the receiver-side
+
+        # let's look at the last 4 bits:  S A F R
+        # 0 0 0 0 represents no flags
+        # 0 1 0 0  ack flag set, and the decimal equivalent is 4
+        # 1 1 0 0 ack and syn flags set, and the decimal equivalent is 12
+        flags = 12 # we are setting the ack and syn flags
+
+        msg = create_packet(sequence_number, acknowledgment_number, flags, window, data)
+        print (f'this is an acknowledgment packet of header size={len(msg)}')
+
     
     if ack == 1:
         print("this is an ack packet")
