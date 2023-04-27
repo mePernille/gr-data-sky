@@ -3,6 +3,8 @@ import time
 import argparse
 import sys
 from struct import *
+from DRTP import *
+import re
 
 
 
@@ -11,7 +13,7 @@ from struct import *
 header_format = '!IIHH'
 
 
-def client():
+def client(reli):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
     serverAddr = ('127.0.0.1', 8083)
     try:
@@ -27,7 +29,17 @@ def client():
     window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
     flags = 0 # we are not going to set any flags when we send a data packet
     packet = create_packet(sequence_number,  acknowledgment_number, flags, window, data)
-    clientSocket.send(packet)      
+    clientSocket.send(packet) 
+
+
+    if reli == 'stop_and_wait':
+        stop_and_wait(clientSocket,packet) # sender pakken og clientSocket til stop and wait funktionen
+
+    elif reli == 'GBN':
+        GBN()
+
+    elif reli == 'SR':
+        SR()            
 
 def server():
     addr = ('127.0.0.1', 8083)
@@ -105,7 +117,7 @@ def check_ip(addres):
     match = re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ipValue)
     if not match:
         print("You must enter a valid Ip address")
-        sys.exit() # when IP not valid the system will exit. 
+        sys.exit() # when IP is not valid the system will exit. 
     else:
         return ipValue
     
@@ -131,7 +143,7 @@ def main():
     parser.add_argument('-i', '--ip', type=check_ip, default='127.0.0.1')
     parser.add_argument('-p','--port', type=check_port, default=8083)
     parser.add_argument('-f','--file')
-    parser.add_argument('-r', '--reliability', type=str, choices=['stop_and_wait','GBN()','SR()'])
+    parser.add_argument('-r', '--reliability', type=str, choices=['stop_and_wait','GBN','SR'])
     
 
     args = parser.parse_args()
@@ -140,7 +152,7 @@ def main():
         server()
     
     elif args.client:
-        client()
+        client(args.reliability)
     
     else:
         print("You need to specify either -s or -c")
