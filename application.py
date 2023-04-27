@@ -32,11 +32,12 @@ def client(ip, port, file, reli):
     header = msg[:12] # tar ut headeren
     header_from_msg = unpack(header_format, header) # pakker ut headeren
     syn, ack, fin = parse_flags(header_from_msg[2]) # tar ut flaggene
-    if syn == 1 and ack == 1: # hvis syn og ack er 1
-        print("connection established")
+    if header_from_msg[2] == (8 | 4): # 8 | 4 = syn og ack flag
+        print("syn-ack pakke mottatt")
         data = b'' # ingen data i ack pakken
         flags = 4
-        msg = create_packet(0, 1, flags, 0, data) # lager en ack pakke
+        ackPacket = create_packet(0, 1, flags, 0, data) # lager en ack pakke
+        clientSocket.send(ackPacket) # sender ack pakken
 
     data = b'0' * 1460 # pakken, aka bilde som skal sendes afsted
     sequence_number=1
@@ -44,7 +45,7 @@ def client(ip, port, file, reli):
     window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
     flags = 0 # we are not going to set any flags when we send a data packet
     packet = create_packet(sequence_number,  acknowledgment_number, flags, window, data)
-    clientSocket.send(packet) 
+    #clientSocket.send(packet) 
 
 
     if reli == 'stop_and_wait':
@@ -69,8 +70,61 @@ def server(ip, port, reli):
 
     while True:
         msg, clientAddr = serverSocket.recvfrom(1472)
-        handle_client(msg, clientAddr, serverSocket) 
-    serverSocket.close()
+        #msg = connectionSocket.recv(1472)
+        #now let's look at the header
+        #we already know that the header is in the first 12 bytes
+
+        header_from_msg = msg[:12]
+        print(len(header_from_msg))
+
+        #now we get the header from the parse_header function
+        #which unpacks the values based on the header_format that 
+        #we specified
+        seq, ack, flags, win = unpack(header_format, header_from_msg)
+        print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
+
+        #now let's parse the flag field
+        syn, ack, fin = parse_flags(flags)
+        print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
+
+        if syn == 8:
+            print("this is a syn packet")
+            #let's mimic an acknowledgment packet from the receiver-end
+            #now let's create a packet with acknowledgement number 1
+            #an acknowledgment packet from the receiver should have no data
+            #only the header with acknowledgment number, ack_flag=1, win=6400
+            data = b''
+            print('\n\nCreating an acknowledgment packet:')
+            print (f'this is an empty packet with no data ={len(data)}')
+
+            sequence_number = 0
+            acknowledgment_number = 1   #an ack for the last sequence
+            window = 0 # window value should always be sent from the receiver-side
+
+            # let's look at the last 4 bits:  S A F R
+            # 0 0 0 0 represents no flags
+            # 0 1 0 0  ack flag set, and the decimal equivalent is 4
+            # 1 1 0 0 ack and syn flags set, and the decimal equivalent is 12
+            flags = 12 # we are setting the ack and syn flags
+
+            synAck = create_packet(sequence_number, acknowledgment_number, flags, window, data)
+            print (f'this is an acknowledgment packet of header size={len(msg)}')
+            serverSocket.sendto(synAck, clientAddr) # send the packet to the client
+
+        
+        if ack == 4:
+            print("this is an ack packet")
+        
+        if fin == 2:
+            print("this is a fin packet")
+
+        elif syn != 8 and ack != 4 and fin != 2:
+            print("no flags are set")
+
+        # Motta data fra klient
+        data = msg[12:]
+        print(f"Mottatt {len(data)} bytes med data")
+            
 
 
 
@@ -81,61 +135,7 @@ def create_packet(seq, ack, flags, win, data):
 
     return packet  
 
-def handle_client(msg, clientAddr, serverSocket):
-    #msg = connectionSocket.recv(1472)
-    #now let's look at the header
-    #we already know that the header is in the first 12 bytes
 
-    header_from_msg = msg[:12]
-    print(len(header_from_msg))
-
-    #now we get the header from the parse_header function
-    #which unpacks the values based on the header_format that 
-    #we specified
-    seq, ack, flags, win = unpack(header_format, header_from_msg)
-    print(f'seq={seq}, ack={ack}, flags={flags}, recevier-window={win}')
-
-    #now let's parse the flag field
-    syn, ack, fin = parse_flags(flags)
-    print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
-
-    if syn == 8:
-        print("this is a syn packet")
-        #let's mimic an acknowledgment packet from the receiver-end
-        #now let's create a packet with acknowledgement number 1
-        #an acknowledgment packet from the receiver should have no data
-        #only the header with acknowledgment number, ack_flag=1, win=6400
-        data = b''
-        print('\n\nCreating an acknowledgment packet:')
-        print (f'this is an empty packet with no data ={len(data)}')
-
-        sequence_number = 0
-        acknowledgment_number = 1   #an ack for the last sequence
-        window = 0 # window value should always be sent from the receiver-side
-
-        # let's look at the last 4 bits:  S A F R
-        # 0 0 0 0 represents no flags
-        # 0 1 0 0  ack flag set, and the decimal equivalent is 4
-        # 1 1 0 0 ack and syn flags set, and the decimal equivalent is 12
-        flags = 12 # we are setting the ack and syn flags
-
-        msg = create_packet(sequence_number, acknowledgment_number, flags, window, data)
-        print (f'this is an acknowledgment packet of header size={len(msg)}')
-        serverSocket.send(msg)
-
-    
-    if ack == 4:
-        print("this is an ack packet")
-    
-    if fin == 2:
-        print("this is a fin packet")
-
-    elif syn != 8 and ack != 4 and fin != 2:
-        print("no flags are set")
-
-    # Motta data fra klient
-    data = msg[12:]
-    print(f"Mottatt {len(data)} bytes med data")
 
 def parse_flags(flags):
     #we only parse the first 3 fields because we're not 
