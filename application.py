@@ -22,6 +22,21 @@ def client(ip, port, file, reli):
     except ConnectionError as e:
         print(e)
         sys.exit()  
+    
+    flags = 8 # 8 = syn flag
+    data = b'' # ingen data i syn pakken
+    packet = create_packet(0, 0, flags, 0, data) # lager en syn pakke
+    clientSocket.send(packet) # sender syn pakken
+
+    msg = clientSocket.recv(1472) # venter på syn ack pakken
+    header = msg[:12] # tar ut headeren
+    header_from_msg = unpack(header_format, header) # pakker ut headeren
+    syn, ack, fin = parse_flags(header_from_msg[2]) # tar ut flaggene
+    if syn == 1 and ack == 1: # hvis syn og ack er 1
+        print("connection established")
+        data = b'' # ingen data i ack pakken
+        flags = 4
+        msg = create_packet(0, 1, flags, 0, data) # lager en ack pakke
 
     data = b'0' * 1460 # pakken, aka bilde som skal sendes afsted
     sequence_number=1
@@ -54,7 +69,7 @@ def server(ip, port, reli):
 
     while True:
         msg, clientAddr = serverSocket.recvfrom(1472)
-        handle_client(msg, clientAddr) 
+        handle_client(msg, clientAddr, serverSocket) 
     serverSocket.close()
 
 
@@ -66,7 +81,7 @@ def create_packet(seq, ack, flags, win, data):
 
     return packet  
 
-def handle_client(msg, clientAddr):
+def handle_client(msg, clientAddr, serverSocket):
     #msg = connectionSocket.recv(1472)
     #now let's look at the header
     #we already know that the header is in the first 12 bytes
@@ -84,7 +99,7 @@ def handle_client(msg, clientAddr):
     syn, ack, fin = parse_flags(flags)
     print (f'syn_flag = {syn}, fin_flag={fin}, and ack_flag={ack}')
 
-    if syn == 1:
+    if syn == 8:
         print("this is a syn packet")
         #let's mimic an acknowledgment packet from the receiver-end
         #now let's create a packet with acknowledgement number 1
@@ -106,15 +121,16 @@ def handle_client(msg, clientAddr):
 
         msg = create_packet(sequence_number, acknowledgment_number, flags, window, data)
         print (f'this is an acknowledgment packet of header size={len(msg)}')
+        serverSocket.send(msg)
 
     
-    if ack == 1:
+    if ack == 4:
         print("this is an ack packet")
     
-    if fin == 1:
+    if fin == 2:
         print("this is a fin packet")
 
-    elif syn != 1 and ack != 1 and fin != 1:
+    elif syn != 8 and ack != 4 and fin != 2:
         print("no flags are set")
 
     # Motta data fra klient
