@@ -5,13 +5,17 @@
 
 
 # 
-def stop_wait(packet, header): # denne må tage ind headeren
+def stop_and_wait(clientSocket, packet): # denne må tage ind headeren
     while True:
-        packet.send() # sender en pakke
-        if data.resv() == "ACK": # hvis den modtager en ack
+        clientSocket.send(packet) # sender en pakke
+
+        data = clientSocket.recv(2400)
+        ack_number = 0
+        if ack == 1 and seq == ack_number: # hvis den modtager en ack
+            ack_number += 1 # forventer at neste pakke skal ha et nummer højere
             continue # fortsetter at sende pakker
         else:
-            socket.settimeout(0.5)# venter i 500ms, må tage imot socket også
+            clientSocket.settimeout(0.5)# venter i 500ms, må tage imot socket også
 
 
     
