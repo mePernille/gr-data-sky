@@ -41,8 +41,8 @@ def client(reli):
     elif reli == 'SR':
         SR()            
 
-def server():
-    addr = ('127.0.0.1', 8083)
+def server(ip, port, reli):
+    addr = (ip, port)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         serverSocket.bind(addr)
@@ -149,10 +149,10 @@ def main():
     args = parser.parse_args()
 
     if args.server:
-        server()
+        server(args.ip, args.port, args.reliability)
     
     elif args.client:
-        client(args.reliability)
+        client(args.ip, args.port, args.file, args.reliability)
     
     else:
         print("You need to specify either -s or -c")
