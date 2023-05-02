@@ -6,25 +6,26 @@ import time
 
 from application import *
 
-<<<<<<< HEAD
+#	def stop_and_wait(clientSocket,serverAddr, packet): # denne må tage ind headeren
+#	    while True:
+#	        clientSocket.sendto(packet, serverAddr) # sender en pakke, OBS hvorfor er sendto og recvfrom hvide her?
+#	
+#	        data, serverAddr = clientSocket.recvfrom(2400)
+#	        ack_number = 0
+#	        if ack == 1 and seq == ack_number: # hvis den modtager en ack
+#	            ack_number += 1 # forventer at neste pakke skal ha et nummer højere
+#	            continue # fortsetter at sende pakker
+#	        else:
+#	            clientSocket.settimeout(0.5)# venter i 500ms, må tage imot socket også
+
+
+
 
 def stop_and_wait(clientSocket, file, clientAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
         print('lager pakke')
         data = f.read(1460)
         seq_number = 1
-=======
-# 
-def stop_and_wait(clientSocket,serverAddr, packet): # denne må tage ind headeren
-    while True:
-
-        clientSocket.sendto(packet, serverAddr) # sender en pakke, OBS hvorfor er sendto og recvfrom hvide her?
-
-        data, serverAddr = clientSocket.recvfrom(2400)
->>>>>>> bb3167647c7f2f5811de1084560703ff4cde8955
-        ack_number = 0
-        window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
-        flags = 0 # we are not going to set any flags when we send a data packet
 
         while data:
             packet = create_packet(seq_number, ack_number, flags, window, data)
@@ -74,4 +75,3 @@ def GBN(clientSocket, serverAddr, packet):
 
 def SR():
     print("hei")    
-        
