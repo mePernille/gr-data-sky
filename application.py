@@ -13,9 +13,9 @@ import re
 header_format = '!IIHH'
 
 
-def client(reli):
+def client(ip, port, file, reli):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
-    serverAddr = ('127.0.0.1', 8083)
+    serverAddr = (ip, port)
     try:
         clientSocket.connect(serverAddr)
 
@@ -29,17 +29,19 @@ def client(reli):
     window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
     flags = 0 # we are not going to set any flags when we send a data packet
     packet = create_packet(sequence_number,  acknowledgment_number, flags, window, data)
-    clientSocket.send(packet) 
+    clientSocket.sendto(packet, serverAddr) 
 
 
     if reli == 'stop_and_wait':
-        stop_and_wait(clientSocket,packet) # sender pakken og clientSocket til stop and wait funktionen
+        stop_and_wait(clientSocket,serverAddr, packet) # sender pakken og clientSocket til stop and wait funktionen
 
     elif reli == 'GBN':
-        GBN()
+        GBN(clientSocket, serverAddr, packet)
 
     elif reli == 'SR':
         SR()            
+
+    clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
 def server(ip, port, reli):
     addr = (ip, port)
