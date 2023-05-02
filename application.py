@@ -39,14 +39,30 @@ def client(ip, port, file, reli):
         ackPacket = create_packet(0, 1, flags, 0, data) # lager en ack pakke
         clientSocket.send(ackPacket) # sender ack pakken
 
+
     if reli == 'stop_and_wait':
         stop_and_wait(clientSocket, file, serverAddr) # sender pakken og clientSocket til stop and wait funktionen
 
+#    data = b'0' * 1460 # pakken, aka bilde som skal sendes afsted
+#    sequence_number=1
+#    acknowledgment_number = 0
+#    window = 0 # window value should always be sent from reciever-side (from safiquls header.py)
+#    flags = 0 # we are not going to set any flags when we send a data packet
+#    packet = create_packet(sequence_number,  acknowledgment_number, flags, window, data)
+#
+#    clientSocket.sendto(packet, serverAddr) 
+
+
+#    if reli == 'stop_and_wait':
+#        stop_and_wait(clientSocket,serverAddr, packet) # sender pakken og clientSocket til stop and wait funktionen
+
     elif reli == 'GBN':
-        GBN()
+        GBN(clientSocket, serverAddr, packet)
 
     elif reli == 'SR':
         SR()            
+
+    clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
 def server(ip, port, reli):
     addr = (ip, port)
