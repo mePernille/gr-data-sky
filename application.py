@@ -41,7 +41,7 @@ def client(ip, port, file, reli):
 
 
     if reli == 'stop_and_wait':
-        stop_and_wait(clientSocket, file, serverAddr) # sender pakken og clientSocket til stop and wait funktionen
+        stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
 #    data = b'0' * 1460 # pakken, aka bilde som skal sendes afsted
 #    sequence_number=1
@@ -85,10 +85,10 @@ def server(ip, port, reli):
 
         data = msg[12:]
         print(f"Received {len(data)} bytes of data")
-
+        #unpack the header
         seq, ack, flags, win = unpack(header_format, header_from_msg)
 
-        #now let's parse the flag field
+        #parse the flag field
         syn, ack, fin = parse_flags(flags)
 
         if syn == 8:
@@ -100,10 +100,6 @@ def server(ip, port, reli):
             acknowledgment_number = 1   #an ack for the last sequence
             window = 0 # window value should always be sent from the receiver-side
 
-            # let's look at the last 4 bits:  S A F R
-            # 0 0 0 0 represents no flags
-            # 0 1 0 0  ack flag set, and the decimal equivalent is 4
-            # 1 1 0 0 ack and syn flags set, and the decimal equivalent is 12
             flags = 12 # we are setting the ack and syn flags
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
