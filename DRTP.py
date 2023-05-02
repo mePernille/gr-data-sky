@@ -26,6 +26,9 @@ def stop_and_wait(clientSocket, file, clientAddr): # denne må tage ind headeren
         print('lager pakke')
         data = f.read(1460)
         seq_number = 1
+        ack_number = 0
+        window = 0
+        flags = 0
 
         while data:
             packet = create_packet(seq_number, ack_number, flags, window, data)
