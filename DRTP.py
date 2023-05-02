@@ -75,4 +75,3 @@ def GBN(clientSocket, serverAddr, packet):
 
 def SR():
     print("hei")    
-        
