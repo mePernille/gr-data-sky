@@ -3,14 +3,14 @@ import time
 import argparse
 import sys
 from struct import *
-from DRTP import *
 import re
+from DRTP import stop_and_wait
+from DRTP import GBN
+from DRTP import SR # havde problemer med at den ikke fandt funktionerne i DRTP filen hvis de blev importert
+from DRTP import create_packet
+from DRTP import parse_flags
+from DRTP import header_format
 
-
-
-# I integer (unsigned long) = 4bytes and H (unsigned short integer 2 bytes)
-# see the struct official page for more info
-header_format = '!IIHH'
 
 
 def client(ip, port, file, reli):
@@ -26,9 +26,9 @@ def client(ip, port, file, reli):
     flags = 8 # 8 = syn flag
     data = b'' # ingen data i syn pakken
     packet = create_packet(0, 0, flags, 0, data) # lager en syn pakke
-    clientSocket.send(packet) # sender syn pakken
+    clientSocket.sendto(packet, serverAddr) # sender syn pakken
 
-    msg = clientSocket.recv(1472) # venter på syn ack pakken
+    msg, serverAddr = clientSocket.recvfrom(1472) # venter på syn ack pakken
     header = msg[:12] # tar ut headeren
     header_from_msg = unpack(header_format, header) # pakker ut headeren
     syn, ack, fin = parse_flags(header_from_msg[2]) # tar ut flaggene
@@ -37,10 +37,11 @@ def client(ip, port, file, reli):
         data = b'' # ingen data i ack pakken
         flags = 4
         ackPacket = create_packet(0, 1, flags, 0, data) # lager en ack pakke
-        clientSocket.send(ackPacket) # sender ack pakken
+        clientSocket.sendto(ackPacket, serverAddr) # sender ack pakken
 
 
     if reli == 'stop_and_wait':
+        
         stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
 #    data = b'0' * 1460 # pakken, aka bilde som skal sendes afsted
@@ -67,6 +68,7 @@ def client(ip, port, file, reli):
 def server(ip, port, reli):
     addr = (ip, port)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+     
     try:
         serverSocket.bind(addr)
     except:
@@ -78,7 +80,7 @@ def server(ip, port, reli):
     output_file = 'received_file.jpg'
 
     while True:
-        msg, clientAddr = serverSocket.recvfrom(1472)
+        msg, addr = serverSocket.recvfrom(1472)
 
         header_from_msg = msg[:12]
         print(len(header_from_msg))
@@ -104,7 +106,7 @@ def server(ip, port, reli):
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
             print (f'sending an acknowledgment packet of header size={len(synAck)}')
-            serverSocket.sendto(synAck, clientAddr) # send the packet to the client
+            serverSocket.sendto(synAck, addr) # send the packet to the client
 
         
         if ack == 4:
@@ -112,38 +114,21 @@ def server(ip, port, reli):
         
         if fin == 2:
             print("received fin packet")
+            break
 
         elif syn == 0 and ack == 0 and fin == 0:
             print("no flags are set")
             with open(output_file, 'ab') as f:
-                f.write(data)
+                f.write(data) # Denne skriver oven i gammel data, kanskje fikse at den sletter når den er færdig.
 
-            acknowledgment_number = sequence_number
+            acknowledgment_number = seq
             window = 0
             flags = 4 # we are setting the ack flag
 
-            ack = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
+            ack = create_packet(seq, acknowledgment_number, flags, window, b'')
             print (f'sending an acknowledgment packet of header size={len(ack)}')
-            serverSocket.sendto(ack, clientAddr) # send the packet to the client
-
-            
-
-def create_packet(seq, ack, flags, win, data):
-    header = pack(header_format, seq, ack, flags, win) 
-
-    packet = header + data
-
-    return packet  
-
-
-
-def parse_flags(flags):
-    #we only parse the first 3 fields because we're not 
-    #using rst in our implementation
-    syn = flags & (1 << 3)
-    ack = flags & (1 << 2)
-    fin = flags & (1 << 1)
-    return syn, ack, fin
+            serverSocket.sendto(ack, addr) # send the packet to the client
+    f.close()
 
 def check_ip(addres):
     try:
