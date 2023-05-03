@@ -3,8 +3,10 @@
 # server sends syn ack
 # now connection are etasblish
 import time
+import socket
+from struct import *
+import sys
 
-from application import *
 
 #	def stop_and_wait(clientSocket,serverAddr, packet): # denne må tage ind headeren
 #	    while True:
@@ -18,10 +20,25 @@ from application import *
 #	        else:
 #	            clientSocket.settimeout(0.5)# venter i 500ms, må tage imot socket også
 
+header_format = '!IIHH'
+
+def create_packet(seq, ack, flags, win, data):
+    header = pack(header_format, seq, ack, flags, win) 
+
+    packet = header + data
+
+    return packet  
+
+def parse_flags(flags):
+    #we only parse the first 3 fields because we're not 
+    #using rst in our implementation
+    syn = flags & (1 << 3)
+    ack = flags & (1 << 2)
+    fin = flags & (1 << 1)
+    return syn, ack, fin
 
 
-
-def stop_and_wait(clientSocket, file, clientAddr): # denne må tage ind headeren
+def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
         print('lager pakke')
         data = f.read(1460)
@@ -33,12 +50,22 @@ def stop_and_wait(clientSocket, file, clientAddr): # denne må tage ind headeren
         while data:
             packet = create_packet(seq_number, ack_number, flags, window, data)
             print('sender pakke')
-            clientSocket.send(packet)
+            clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
 
-            while not wait_for_ack(clientSocket, seq_number + 1, clientAddr):
-                print(f"Packet {seq_number} lost, resending")
-                clientSocket.send(packet)
+            while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
+                print("lost")
+                clientSocket.sendto(packet,serverAddr)
+                break
+
+
                 
+
+            '''
+            while not wait_for_ack(clientSocket, seq_number + 1, serverAddr):
+                print(f"Packet {seq_number} lost, resending")
+                clientSocket.sendto(packet, serverAddr)
+               ''' 
+
             print(f"Packet {seq_number} sent successfully")
             seq_number += 1
             ack_number += 1
@@ -47,15 +74,18 @@ def stop_and_wait(clientSocket, file, clientAddr): # denne må tage ind headeren
         # Send fin flag
         flags = 2 # fin flag
         fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
-        clientSocket.send(fin_packet)
+        clientSocket.sendto(fin_packet, serverAddr)
+
             
-def wait_for_ack(clientSocket, expected_ack, clientAddr):
+def wait_for_ack(clientSocket, expected_ack, serverAddr):
     clientSocket.settimeout(0.5) # 500 ms timeout
     try:
-        msg, _ = clientSocket.recvfrom(1472)
+        msg, serverAddr = clientSocket.recvfrom(1472)
+        print("Recived ack")
         header = msg[:12]
         seq, ack, flags, win = unpack(header_format, header)
         _, ack_flag, _ = parse_flags(flags)
+        
 
         if ack_flag == 4 and ack == expected_ack:
             clientSocket.settimeout(None) # reset timeout
@@ -65,7 +95,7 @@ def wait_for_ack(clientSocket, expected_ack, clientAddr):
         print("Timeout, no ACK received")
         return False
         
-    return False
+    return True
 
     
 
