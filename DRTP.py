@@ -8,18 +8,6 @@ from struct import *
 import sys
 
 
-#	def stop_and_wait(clientSocket,serverAddr, packet): # denne må tage ind headeren
-#	    while True:
-#	        clientSocket.sendto(packet, serverAddr) # sender en pakke, OBS hvorfor er sendto og recvfrom hvide her?
-#	
-#	        data, serverAddr = clientSocket.recvfrom(2400)
-#	        ack_number = 0
-#	        if ack == 1 and seq == ack_number: # hvis den modtager en ack
-#	            ack_number += 1 # forventer at neste pakke skal ha et nummer højere
-#	            continue # fortsetter at sende pakker
-#	        else:
-#	            clientSocket.settimeout(0.5)# venter i 500ms, må tage imot socket også
-
 header_format = '!IIHH'
 
 def create_packet(seq, ack, flags, win, data):
@@ -56,15 +44,6 @@ def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
                 print("lost")
                 clientSocket.sendto(packet,serverAddr)
                 break
-
-
-                
-
-            '''
-            while not wait_for_ack(clientSocket, seq_number + 1, serverAddr):
-                print(f"Packet {seq_number} lost, resending")
-                clientSocket.sendto(packet, serverAddr)
-               ''' 
 
             print(f"Packet {seq_number} sent successfully")
             seq_number += 1
@@ -106,5 +85,34 @@ def GBN(clientSocket, serverAddr, packet):
 
         # tjekke pakke nr
 
-def SR():
-    print("hei")    
+def SR(serverSocket, first_data, first_seq, finflag, output_file):
+    received_packets = {first_seq: first_data}
+    expected_seq = 1
+    fin_received = False
+
+    while not fin_received:
+        msg, addr = serverSocket.recvfrom(1472)
+        header = msg[:12]
+        data = msg[12:]
+        seq, ack, flags, win = unpack(header_format, header)
+        synflag, ackflag, finflag = parse_flags(flags)
+
+        if finflag == 2:
+            fin_received = True
+            print("Fin received")
+            break
+
+        if seq not in received_packets:
+            received_packets[seq] = data
+            print(f"Packet {seq} received")
+
+        if seq == expected_seq:
+            while expected_seq in received_packets:
+                expected_seq += 1
+            
+    with open(output_file, 'ab') as f:
+        for seq in sorted(received_packets.keys()):
+            f.write(received_packets[seq])
+        received_seq_list = sorted(received_packets.keys())
+        print("Liste over nr:", received_seq_list)
+        print("All packets received")
