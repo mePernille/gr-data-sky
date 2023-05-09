@@ -7,7 +7,6 @@ import socket
 from struct import *
 import sys
 
-
 header_format = '!IIHH'
 
 def create_packet(seq, ack, flags, win, data):
@@ -78,8 +77,93 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
 
     
 
-def GBN(clientSocket, serverAddr, packet):
-    while True:
+def GBN(clientSocket, serverAddr, file):
+    '''
+    with open(file, 'rb') as f:
+        print('lager pakke')
+        #data = f.read(1460)
+        seq_number = 1
+        ack_number = 0
+        window = 5
+        flags = 0
+        j = 1
+        packetSend = {}
+    '''
+        
+    with open(file, 'rb') as f:
+        print('Creating packets')
+        packets = []
+        seq_number = 1
+        ack_number = 0
+        flags = 0
+        
+        # create packets and add to list
+        while True:
+            data = f.read(1460)
+            if not data:
+                break
+            packet = create_packet(seq_number, ack_number, flags, 5, data)
+            packets.append(packet)
+            seq_number += 1
+        
+        # send packets
+        print(f"Sending {len(packets)} packets")
+        window_start = 1
+        window_end = 5
+        while window_start <= len(packets):
+            for i in range(window_start, window_end+1):
+                if i > len(packets):
+                    break
+                clientSocket.sendto(packets[i-1], serverAddr)
+                print(f"Packet {i} sent")
+            
+            # wait for ACKs
+            while True:
+                ack_received = False
+                for i in range(window_start, window_end+1):
+                    if i > len(packets):
+                        break
+                    if wait_for_ack(clientSocket, i, serverAddr):
+                        ack_received = True
+                        ack_number = i
+                if not ack_received:
+                    print("Timeout, resending window")
+                    break
+                
+                # update window
+                window_start = ack_number + 1
+                window_end = min(window_start + 4, len(packets))
+                if window_start > len(packets):
+                    break
+                    
+        print("File transfer completed")
+
+
+
+        '''
+        for i in range(j, window +1):
+                data = f.read(1460)
+                print(window)
+                if not data:
+                    break
+                packet = create_packet(seq_number, ack_number, flags, window, data)
+                print('sender pakke')
+                packetSend[i] = packet
+                clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
+                
+                while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
+                    print("lost")
+                    clientSocket.sendto(packet,serverAddr)
+                    break
+                j+=5
+                window+=5
+                print(f"Packet {seq_number} sent successfully")
+                seq_number += 1
+                ack_number += 1
+                data = f.read(1460)
+   '''
+
+        '''
         for i in range(0, len(packet), 5): # sender 5 biter av pakken om gangen
             packet.sendto(packet, serverAddr) #sender det til server
 
