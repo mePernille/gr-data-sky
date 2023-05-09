@@ -78,18 +78,7 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
     
 
 def GBN(clientSocket, serverAddr, file):
-    '''
-    with open(file, 'rb') as f:
-        print('lager pakke')
-        #data = f.read(1460)
-        seq_number = 1
-        ack_number = 0
-        window = 5
-        flags = 0
-        j = 1
-        packetSend = {}
-    '''
-        
+   
     with open(file, 'rb') as f:
         print('Creating packets')
         packets = []
@@ -138,36 +127,6 @@ def GBN(clientSocket, serverAddr, file):
                     
         print("File transfer completed")
 
-
-
-        '''
-        for i in range(j, window +1):
-                data = f.read(1460)
-                print(window)
-                if not data:
-                    break
-                packet = create_packet(seq_number, ack_number, flags, window, data)
-                print('sender pakke')
-                packetSend[i] = packet
-                clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
-                
-                while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
-                    print("lost")
-                    clientSocket.sendto(packet,serverAddr)
-                    break
-                j+=5
-                window+=5
-                print(f"Packet {seq_number} sent successfully")
-                seq_number += 1
-                ack_number += 1
-                data = f.read(1460)
-   '''
-
-        '''
-        for i in range(0, len(packet), 5): # sender 5 biter av pakken om gangen
-            packet.sendto(packet, serverAddr) #sender det til server
-
-        # tjekke pakke nr
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file):
     received_packets = {first_seq: first_data}
