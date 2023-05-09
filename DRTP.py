@@ -168,6 +168,35 @@ def GBN(clientSocket, serverAddr, file):
             packet.sendto(packet, serverAddr) #sender det til server
 
         # tjekke pakke nr
-        '''
-def SR():
-    print("hei")    
+
+def SR(serverSocket, first_data, first_seq, finflag, output_file):
+    received_packets = {first_seq: first_data}
+    expected_seq = 1
+    fin_received = False
+
+    while not fin_received:
+        msg, addr = serverSocket.recvfrom(1472)
+        header = msg[:12]
+        data = msg[12:]
+        seq, ack, flags, win = unpack(header_format, header)
+        synflag, ackflag, finflag = parse_flags(flags)
+
+        if finflag == 2:
+            fin_received = True
+            print("Fin received")
+            break
+
+        if seq not in received_packets:
+            received_packets[seq] = data
+            print(f"Packet {seq} received")
+
+        if seq == expected_seq:
+            while expected_seq in received_packets:
+                expected_seq += 1
+            
+    with open(output_file, 'ab') as f:
+        for seq in sorted(received_packets.keys()):
+            f.write(received_packets[seq])
+        received_seq_list = sorted(received_packets.keys())
+        print("Liste over nr:", received_seq_list)
+        print("All packets received")
