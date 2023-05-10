@@ -6,6 +6,7 @@ import time
 import socket
 from struct import *
 import sys
+import random
 
 header_format = '!IIHH'
 
@@ -23,6 +24,27 @@ def parse_flags(flags):
     ack = flags & (1 << 2)
     fin = flags & (1 << 1)
     return syn, ack, fin
+
+ack_counter = 0
+seq_counter = 0
+
+def handle_test_case(test_case, clientSocket):
+    global seq_counter
+    global ack_counter
+    if test_case == 'loss':
+        seq_counter += 1
+        if seq_counter == 20: # Skipper hver 14. pakke
+            seq_counter = 0
+            return True # Returnerer True for å indikere at pakken skal droppes
+        else:
+            return False
+    elif test_case == 'skip_ack':
+        ack_counter += 1
+        if ack_counter == 20: # Skipper hver 14. ack
+            ack_counter = 0
+            return True # Returnerer True for å indikere at ack skal droppes
+        else:
+            return False # Returnerer False for å indikere at ack skal sendes
 
 
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren

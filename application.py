@@ -10,10 +10,11 @@ from DRTP import SR # havde problemer med at den ikke fandt funktionerne i DRTP 
 from DRTP import create_packet
 from DRTP import parse_flags
 from DRTP import header_format
+from DRTP import handle_test_case
 
 
 
-def client(ip, port, file, reli):
+def client(ip, port, file, reli, test_case):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
     serverAddr = (ip, port)
     try:
@@ -61,7 +62,10 @@ def client(ip, port, file, reli):
                 print('sender pakke')
                 clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
                 print(f"Packet {seq_number} sent successfully")
-                seq_number += 1
+                if handle_test_case(test_case, clientSocket):
+                    seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                else:
+                    seq_number += 1
                 ack_number += 1
                 data = f.read(1460)       
 
@@ -72,7 +76,7 @@ def client(ip, port, file, reli):
 
     clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
-def server(ip, port, reli):
+def server(ip, port, reli, test_case):
     addr = (ip, port)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
      
@@ -83,6 +87,7 @@ def server(ip, port, reli):
         sys.exit()
 
     print(f"Server is listening")
+
 
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
@@ -130,6 +135,8 @@ def server(ip, port, reli):
                 window = 0
                 flags = 4 # we are setting the ack flag
 
+                if handle_test_case(test_case, serverSocket):
+                    continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
                 ack = create_packet(seq, acknowledgment_number, flags, window, b'')
                 print (f'sending an acknowledgment packet of header size={len(ack)}')
                 serverSocket.sendto(ack, addr) # send the packet to the client
@@ -175,15 +182,20 @@ def main():
     parser.add_argument('-p','--port', type=check_port, default=8083)
     parser.add_argument('-f','--file')
     parser.add_argument('-r', '--reliability', type=str, choices=['stop_and_wait','GBN','SR'])
+    parser.add_argument('-t', '--test_case', type=str, choices=['loss', 'skip_ack'])
     
 
     args = parser.parse_args()
 
     if args.server:
-        server(args.ip, args.port, args.reliability)
+        serverSocket = server(args.ip, args.port, args.reliability, args.test_case)
+        if args.test_case:
+            handle_test_case(args.test_case, serverSocket)
     
     elif args.client:
-        client(args.ip, args.port, args.file, args.reliability)
+        clientSocket = client(args.ip, args.port, args.file, args.reliability, args.test_case)
+        if args.test_case:
+            handle_test_case(args.test_case, clientSocket)
     
     else:
         print("You need to specify either -s or -c")
