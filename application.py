@@ -31,9 +31,9 @@ def client(ip, port, file, reli, test_case):
 
     msg, serverAddr = clientSocket.recvfrom(1472) # venter på syn ack pakken
     header = msg[:12] # tar ut headeren
-    header_from_msg = unpack(header_format, header) # pakker ut headeren
-    syn, ack, fin = parse_flags(header_from_msg[2]) # tar ut flaggene
-    if header_from_msg[2] == (8 | 4): # 8 | 4 = syn og ack flag
+    seq, ack, flags, win = unpack(header_format, header)
+    syn, ack, fin = parse_flags(flags) # tar ut flaggene
+    if flags == (8 | 4): # 8 | 4 = syn og ack flag
         print("syn-ack pakke mottatt")
         data = b'' # ingen data i ack pakken
         flags = 4
@@ -51,28 +51,68 @@ def client(ip, port, file, reli, test_case):
     elif reli == 'SR':
         with open(file, 'rb') as f:
             print('lager pakke')
-            data = f.read(1460)
             seq_number = 1
             ack_number = 0
-            window = 0
+            window = 5
             flags = 0
+            unacked_packets = []
 
-            while data:
+            # Fyll vinduet første gang
+            for _ in range(window):
+                data = f.read(1460)
+                if not data:
+                    break
+
                 packet = create_packet(seq_number, ack_number, flags, window, data)
                 print('sender pakke')
                 clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
                 print(f"Packet {seq_number} sent successfully")
-                if handle_test_case(test_case, clientSocket):
-                    seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
-                else:
-                    seq_number += 1
-                ack_number += 1
-                data = f.read(1460)       
+                unacked_packets.append((seq_number, packet))
+                seq_number += 1
+            
+            # Håndter innkommende ACK og send nye pakker
+            while unacked_packets:
+                try:
+                    msg, serverAddr = clientSocket.recvfrom(1472)
+                    header = msg[:12]
+                    seq, ack, flags, win = unpack(header_format, header)
+                    _, ack_flag, _ = parse_flags(flags)
 
+                    if ack_flag == 4:
+                        for i, (ack_seq_number, _) in enumerate(unacked_packets):
+                            if ack_seq_number == ack:
+                                print("Recived ack")
+                                unacked_packets.pop(i)
+                                break
+                    
+                    # Send en ny pakke for hver mottatt ACK
+                    data = f.read(1460)
+                    if data:
+                        packet = create_packet(seq_number, ack_number, flags, window, data)
+                        print('sender pakke')
+                        clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
+                        print(f"Packet {seq_number} sent successfully")
+                        unacked_packets.append((seq_number, packet))
+                        if handle_test_case(test_case, clientSocket):
+                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                        else:
+                            seq_number += 1
+                    
+                    else:
+                        break
+                
+                except socket.timeout:
+                    print("Timeout, no ACK received")
+                    # Resend all unacked packets
+                    for seq_number, packet_to_resend in unacked_packets:
+                        clientSocket.sendto(packet_to_resend, serverAddr)
+                        print(f"Resending packet {seq_number}")
+            
             # Send fin flag
             flags = 2 # fin flag
             fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
-            clientSocket.sendto(fin_packet, serverAddr)    
+            clientSocket.sendto(fin_packet, serverAddr)
+            print("Sent fin packet")
 
     clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
