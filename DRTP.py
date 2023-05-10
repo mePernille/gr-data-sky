@@ -46,7 +46,6 @@ def handle_test_case(test_case, clientSocket):
         else:
             return False # Returnerer False for å indikere at ack skal sendes
 
-
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
         print('lager pakke')
@@ -150,7 +149,7 @@ def GBN(clientSocket, serverAddr, file):
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file):
     received_packets = {first_seq: first_data}
-    expected_seq = 1
+    #expected_seq = 1
     fin_received = False
 
     while not fin_received:
@@ -168,10 +167,15 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file):
         if seq not in received_packets:
             received_packets[seq] = data
             print(f"Packet {seq} received")
+            acknowledgment_number = seq
+            window = 5
+            flags = 4 # we are setting the ack flag
+            ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
+            serverSocket.sendto(ack_packet, addr)
 
-        if seq == expected_seq:
-            while expected_seq in received_packets:
-                expected_seq += 1
+        #if seq == expected_seq:
+        #    while expected_seq in received_packets:
+        #        expected_seq += 1
             
     with open(output_file, 'ab') as f:
         for seq in sorted(received_packets.keys()):
