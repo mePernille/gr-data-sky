@@ -88,15 +88,15 @@ def client(ip, port, file, reli, test_case):
                     # Send en ny pakke for hver mottatt ACK
                     data = f.read(1460)
                     if data:
+                        if handle_test_case(test_case, clientSocket):
+                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                        else:
+                            seq_number += 1
                         packet = create_packet(seq_number, ack_number, flags, window, data)
                         print('sender pakke')
                         clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
                         print(f"Packet {seq_number} sent successfully")
                         unacked_packets.append((seq_number, packet))
-                        if handle_test_case(test_case, clientSocket):
-                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
-                        else:
-                            seq_number += 1
                     
                     else:
                         break
