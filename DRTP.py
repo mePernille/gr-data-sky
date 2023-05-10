@@ -1,5 +1,5 @@
 # DRTP
-# first header from cient to server with sin flag
+# first header from client to server with sin flag
 # server sends syn ack
 # now connection are etasblish
 import time
@@ -34,6 +34,7 @@ def handle_test_case(test_case, clientSocket):
     if test_case == 'loss':
         seq_counter += 1
         if seq_counter == 20: # Skipper hver 14. pakke
+            print("skip pakke")
             seq_counter = 0
             return True # Returnerer True for å indikere at pakken skal droppes
         else:
@@ -175,9 +176,6 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file):
             ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
             serverSocket.sendto(ack_packet, addr)
 
-        #if seq == expected_seq:
-        #    while expected_seq in received_packets:
-        #        expected_seq += 1
             
     with open(output_file, 'ab') as f:
         for seq in sorted(received_packets.keys()):
