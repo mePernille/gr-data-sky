@@ -187,6 +187,8 @@ def main():
 
     args = parser.parse_args()
 
+    server_reli = 0
+    
     if args.server:
         server_reli = args.reliability
         serverSocket = server(args.ip, args.port, args.reliability, args.test_case)
@@ -195,7 +197,7 @@ def main():
     
     elif args.client:
         client_reli = args.reliability
-        if server_reli != client_reli:
+        if  client_reli != server_reli:
             print("The client must run in the same reliability mode as you run the server in!")
             sys.exit()
         clientSocket = client(args.ip, args.port, args.file, args.reliability, args.test_case)
