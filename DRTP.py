@@ -103,36 +103,34 @@ def GBN(clientSocket, serverAddr, file):
    
     with open(file, 'rb') as f:
         print('Creating packets')
-        packets = []
+        data = f.read(1064)
+        reseived_packets = []
         seq_number = 1
         ack_number = 0
+        window = 5
         flags = 0
         
-        # create packets and add to list
-        while True:
-            data = f.read(1460)
-            if not data:
-                break
-            packet = create_packet(seq_number, ack_number, flags, 5, data)
-            packets.append(packet)
+        while data:
+            packet = create_packet(seq_number, ack_number, flags, window, data)
+            reseived_packets.append(packet)
             seq_number += 1
-        
+
+    
         # send packets
-        print(f"Sending {len(packets)} packets")
-        window_start = 1
-        window_end = 5
-        while window_start <= len(packets):
+        print(f"Sending {len(reseived_packets)} packets")
+
+        while window_start <= len(reseived_packets):
             for i in range(window_start, window_end+1):
-                if i > len(packets):
+                if i > len(reseived_packets):
                     break
-                clientSocket.sendto(packets[i-1], serverAddr)
+                clientSocket.sendto(reseived_packets[i-1], serverAddr)
                 print(f"Packet {i} sent")
             
             # wait for ACKs
             while True:
                 ack_received = False
                 for i in range(window_start, window_end+1):
-                    if i > len(packets):
+                    if i > len(reseived_packets):
                         break
                     if wait_for_ack(clientSocket, i, serverAddr):
                         ack_received = True
@@ -143,8 +141,8 @@ def GBN(clientSocket, serverAddr, file):
                 
                 # update window
                 window_start = ack_number + 1
-                window_end = min(window_start + 4, len(packets))
-                if window_start > len(packets):
+                window_end = min(window_start + 4, len(reseived_packets))
+                if window_start > len(reseived_packets):
                     break
                     
         print("File transfer completed")
