@@ -31,18 +31,18 @@ seq_counter = 0
 def handle_test_case(test_case, clientSocket):
     global seq_counter
     global ack_counter
+    #print(f"handle_test_case: test_case={test_case}, seq_counter={seq_counter}, ack_counter={ack_counter}")  # Print current values
     if test_case == 'loss':
         seq_counter += 1
-        if seq_counter == 20: # Skipper hver 14. pakke
+        if seq_counter == 20: # Skipper hver 20. pakke
             print("skip pakke")
-            seq_counter = 0
             return True # Returnerer True for å indikere at pakken skal droppes
         else:
             return False
     elif test_case == 'skip_ack':
         ack_counter += 1
-        if ack_counter == 20: # Skipper hver 14. ack
-            ack_counter = 0
+        if ack_counter == 20: # Skipper hver 20. ack
+            print("skip ack")
             return True # Returnerer True for å indikere at ack skal droppes
         else:
             return False # Returnerer False for å indikere at ack skal sendes
@@ -148,10 +148,10 @@ def GBN(clientSocket, serverAddr, file):
         print("File transfer completed")
 
 
-def SR(serverSocket, first_data, first_seq, finflag, output_file):
+def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
     received_packets = {first_seq: first_data}
-    #expected_seq = 1
     fin_received = False
+
 
     while not fin_received:
         msg, addr = serverSocket.recvfrom(1472)
@@ -171,6 +171,8 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file):
             acknowledgment_number = seq
             window = 5
             flags = 4 # we are setting the ack flag
+            if handle_test_case(test_case, serverSocket):
+                continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
             ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
             serverSocket.sendto(ack_packet, addr)
 

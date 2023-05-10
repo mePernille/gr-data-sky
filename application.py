@@ -11,11 +11,13 @@ from DRTP import create_packet
 from DRTP import parse_flags
 from DRTP import header_format
 from DRTP import handle_test_case
+import select
 
 
 
 def client(ip, port, file, reli, test_case):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
+    clientSocket.settimeout(0.5) # 500 ms timeout
     serverAddr = (ip, port)
     try:
         clientSocket.connect(serverAddr)
@@ -51,11 +53,12 @@ def client(ip, port, file, reli, test_case):
     elif reli == 'SR':
         with open(file, 'rb') as f:
             print('lager pakke')
-            seq_number = 1
+            seq_number = 0
             ack_number = 0
             window = 5
             flags = 0
-            unacked_packets = []
+            unacked_packets = {} # dictionary to hold the packets that have been sent but not yet acknowledged
+            unacked_seq_numbers = [] # list to hold the sequence numbers of the packets that have been sent in the order they were sent
 
             # Fyll vinduet første gang
             for _ in range(window):
@@ -63,50 +66,52 @@ def client(ip, port, file, reli, test_case):
                 if not data:
                     break
 
+                seq_number += 1
                 packet = create_packet(seq_number, ack_number, flags, window, data)
                 print('sender pakke')
                 clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
                 print(f"Packet {seq_number} sent successfully")
-                unacked_packets.append((seq_number, packet))
-                seq_number += 1
+                unacked_packets[seq_number] = packet
             
             # Håndter innkommende ACK og send nye pakker
-            while unacked_packets:
-                try:
+            while unacked_packets or data:
+                ready = select.select([clientSocket], [], [], 0.5)
+                if ready[0]:
                     msg, serverAddr = clientSocket.recvfrom(1472)
                     header = msg[:12]
                     seq, ack, flags, win = unpack(header_format, header)
                     _, ack_flag, _ = parse_flags(flags)
 
                     if ack_flag == 4:
-                        for i, (ack_seq_number, _) in enumerate(unacked_packets):
-                            if ack_seq_number == ack:
-                                print("Recived ack")
-                                unacked_packets.pop(i)
-                                break
+                        if ack in unacked_packets:
+                            print(f"Received ACK for packet {ack}")
+                            del unacked_packets[ack]
+                            if ack in unacked_seq_numbers:
+                                unacked_seq_numbers.remove(ack)
                     
                     # Send en ny pakke for hver mottatt ACK
                     data = f.read(1460)
                     if data:
                         if handle_test_case(test_case, clientSocket):
                             seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                            continue
                         else:
                             seq_number += 1
                         packet = create_packet(seq_number, ack_number, flags, window, data)
                         print('sender pakke')
                         clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
                         print(f"Packet {seq_number} sent successfully")
-                        unacked_packets.append((seq_number, packet))
+                        unacked_packets[seq_number] = packet
+                        unacked_seq_numbers.append(seq_number)
                     
-                    else:
-                        break
-                
-                except socket.timeout:
-                    print("Timeout, no ACK received")
-                    # Resend all unacked packets
-                    for seq_number, packet_to_resend in unacked_packets:
+                    if not ready[0] and unacked_seq_numbers:
+                        print("Timeout, no ACK received")
+                        # Resend all unacked packets
+                        oldest_unacked_seq_number = unacked_seq_numbers[0]
+                        packet_to_resend = unacked_packets[oldest_unacked_seq_number]
                         clientSocket.sendto(packet_to_resend, serverAddr)
-                        print(f"Resending packet {seq_number}")
+                        print(f"Resent packet {oldest_unacked_seq_number}")
+                
             
             # Send fin flag
             flags = 2 # fin flag
@@ -166,7 +171,14 @@ def server(ip, port, reli, test_case):
         
         elif synflag == 0 and ackflag == 0:
             if reli == 'SR':
-                SR(serverSocket, data, seq, finflag, output_file)
+                # Sender ack for første pakke
+                acknowledgment_number = seq
+                window = 5
+                flags = 4 # we are setting the ack flag
+                ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
+                serverSocket.sendto(ack_packet, addr)
+                print(f"sent ack for packet {seq}")
+                SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:    
                 with open(output_file, 'ab') as f:
                     f.write(data) # Skriver data til filen
@@ -237,17 +249,12 @@ def main():
     
     elif args.client:
         client_reli = args.reliability
-    
         clientSocket = client(args.ip, args.port, args.file, args.reliability, args.test_case)
-    
-        if  client_reli != server_reli:
-            print("The client must run in the same reliability mode as you run the server in!")
-            sys.exit()
         if args.test_case:
             handle_test_case(args.test_case, clientSocket)
     
     else:
-        print("You need to specify either -s or -c")
+        ("You need to specify either -s or -c")
         sys.exit()
 
 if __name__ == '__main__':
