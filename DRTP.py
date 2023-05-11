@@ -96,56 +96,53 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
         
     return True
 
-    
+def window_size(number_packets, start):
+     
+    return min(5, number_packets - start)   
 
 def GBN(clientSocket, serverAddr, file):
-   
+    global start
+
     with open(file, 'rb') as f:
         print('Creating packets')
-        data = f.read(1064)
-        reseived_packets = []
         seq_number = 1
         ack_number = 0
         window = 5
         flags = 0
+        unacked_packets = []
         
-        while data:
+
+        start = 0
+        while True:
+            data = f.read(1064)
+            if not data:
+                break
             packet = create_packet(seq_number, ack_number, flags, window, data)
-            reseived_packets.append(packet)
-            seq_number += 1
-
-    
-        # send packets
-        print(f"Sending {len(reseived_packets)} packets")
-
-        while window_start <= len(reseived_packets):
-            for i in range(window_start, window_end+1):
-                if i > len(reseived_packets):
-                    break
-                clientSocket.sendto(reseived_packets[i-1], serverAddr)
-                print(f"Packet {i} sent")
+            unacked_packets.append((seq_number, packet))
             
-            # wait for ACKs
-            while True:
-                ack_received = False
-                for i in range(window_start, window_end+1):
-                    if i > len(reseived_packets):
-                        break
-                    if wait_for_ack(clientSocket, i, serverAddr):
-                        ack_received = True
-                        ack_number = i
-                if not ack_received:
-                    print("Timeout, resending window")
-                    break
-                
-                # update window
-                window_start = ack_number + 1
-                window_end = min(window_start + 4, len(reseived_packets))
-                if window_start > len(reseived_packets):
-                    break
-                    
-        print("File transfer completed")
+            number_packets = len(unacked_packets)
+            print(start + window)
 
+            while start < number_packets:
+                while seq_number < start + window+1:
+                    clientSocket.sendto(packet, serverAddr)
+                    print(f"packet {seq_number} sent")
+                    seq_number += 1
+
+                if wait_for_ack(clientSocket, seq_number, serverAddr) == True:
+                    start +=1
+                    if seq_number == ack_number:
+                        ack_number +=1
+                        seq_number += 1
+                else:
+                    print("resending")
+                    seq_number = start
+  
+
+        flags = 2 # fin flag
+        fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
+        clientSocket.sendto(fin_packet, serverAddr)
+        print("Sent fin packet")
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file):
     received_packets = {first_seq: first_data}
