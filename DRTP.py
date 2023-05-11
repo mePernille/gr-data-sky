@@ -1,11 +1,12 @@
 # DRTP
-# first header from cient to server with sin flag
+# first header from client to server with sin flag
 # server sends syn ack
 # now connection are etasblish
 import time
 import socket
 from struct import *
 import sys
+import random
 
 header_format = '!IIHH'
 
@@ -24,6 +25,28 @@ def parse_flags(flags):
     fin = flags & (1 << 1)
     return syn, ack, fin
 
+ack_counter = 0
+seq_counter = 0
+
+def handle_test_case(test_case, clientSocket):
+    global seq_counter
+    global ack_counter
+    #print(f"handle_test_case: test_case={test_case}, seq_counter={seq_counter}, ack_counter={ack_counter}")  # Print current values
+    if test_case == 'loss':
+        seq_counter += 1
+        if seq_counter == 20: # Skipper hver 20. pakke
+            print("skip pakke")
+            return True # Returnerer True for å indikere at pakken skal droppes
+        else:
+            return False
+    elif test_case == 'skip_ack':
+        ack_counter += 1
+        if ack_counter == 20: # Skipper hver 20. ack
+            print("skip ack")
+            return True # Returnerer True for å indikere at ack skal droppes
+        else:
+            return False # Returnerer False for å indikere at ack skal sendes
+        
 
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
@@ -75,104 +98,58 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
         
     return True
 
-    
+def window_size(number_packets, start):
+     
+    return min(5, number_packets - start)   
 
 def GBN(clientSocket, serverAddr, file):
-    '''
+    global start
+
     with open(file, 'rb') as f:
-        print('lager pakke')
-        #data = f.read(1460)
+        print('Creating packets')
         seq_number = 1
         ack_number = 0
         window = 5
         flags = 0
-        j = 1
-        packetSend = {}
-    '''
+        unacked_packets = []
         
-    with open(file, 'rb') as f:
-        print('Creating packets')
-        packets = []
-        seq_number = 1
-        ack_number = 0
-        flags = 0
-        
-        # create packets and add to list
+
+        start = 0
         while True:
-            data = f.read(1460)
+            data = f.read(1064)
             if not data:
                 break
-            packet = create_packet(seq_number, ack_number, flags, 5, data)
-            packets.append(packet)
-            seq_number += 1
-        
-        # send packets
-        print(f"Sending {len(packets)} packets")
-        window_start = 1
-        window_end = 5
-        while window_start <= len(packets):
-            for i in range(window_start, window_end+1):
-                if i > len(packets):
-                    break
-                clientSocket.sendto(packets[i-1], serverAddr)
-                print(f"Packet {i} sent")
+            packet = create_packet(seq_number, ack_number, flags, window, data)
+            unacked_packets.append((seq_number, packet))
             
-            # wait for ACKs
-            while True:
-                ack_received = False
-                for i in range(window_start, window_end+1):
-                    if i > len(packets):
-                        break
-                    if wait_for_ack(clientSocket, i, serverAddr):
-                        ack_received = True
-                        ack_number = i
-                if not ack_received:
-                    print("Timeout, resending window")
-                    break
-                
-                # update window
-                window_start = ack_number + 1
-                window_end = min(window_start + 4, len(packets))
-                if window_start > len(packets):
-                    break
-                    
-        print("File transfer completed")
+            number_packets = len(unacked_packets)
+            print(start + window)
 
+            while start < number_packets:
+                while seq_number < start + window+1:
+                    clientSocket.sendto(packet, serverAddr)
+                    print(f"packet {seq_number} sent")
+                    seq_number += 1
 
+                if wait_for_ack(clientSocket, seq_number, serverAddr) == True:
+                    start +=1
+                    if seq_number == ack_number:
+                        ack_number +=1
+                        seq_number += 1
+                else:
+                    print("resending")
+                    seq_number = start
+  
 
-        '''
-        for i in range(j, window +1):
-                data = f.read(1460)
-                print(window)
-                if not data:
-                    break
-                packet = create_packet(seq_number, ack_number, flags, window, data)
-                print('sender pakke')
-                packetSend[i] = packet
-                clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
-                
-                while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
-                    print("lost")
-                    clientSocket.sendto(packet,serverAddr)
-                    break
-                j+=5
-                window+=5
-                print(f"Packet {seq_number} sent successfully")
-                seq_number += 1
-                ack_number += 1
-                data = f.read(1460)
-   '''
+        flags = 2 # fin flag
+        fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
+        clientSocket.sendto(fin_packet, serverAddr)
+        print("Sent fin packet")
 
-        '''
-        for i in range(0, len(packet), 5): # sender 5 biter av pakken om gangen
-            packet.sendto(packet, serverAddr) #sender det til server
-
-        # tjekke pakke nr
-        '''
-def SR(serverSocket, first_data, first_seq, finflag, output_file):
+def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
     received_packets = {first_seq: first_data}
-    expected_seq = 1
     fin_received = False
+
 
     while not fin_received:
         msg, addr = serverSocket.recvfrom(1472)
@@ -189,10 +166,15 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file):
         if seq not in received_packets:
             received_packets[seq] = data
             print(f"Packet {seq} received")
+            acknowledgment_number = seq
+            window = 5
+            flags = 4 # we are setting the ack flag
+            if handle_test_case(test_case, serverSocket):
+                continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
+            ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
+            serverSocket.sendto(ack_packet, addr)
+            print(f"ACK {acknowledgment_number} sent")
 
-        if seq == expected_seq:
-            while expected_seq in received_packets:
-                expected_seq += 1
             
     with open(output_file, 'ab') as f:
         for seq in sorted(received_packets.keys()):

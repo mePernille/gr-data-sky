@@ -10,11 +10,14 @@ from DRTP import SR # havde problemer med at den ikke fandt funktionerne i DRTP 
 from DRTP import create_packet
 from DRTP import parse_flags
 from DRTP import header_format
+from DRTP import handle_test_case
+import select
 
 
 
-def client(ip, port, file, reli):
+def client(ip, port, file, reli, test_case):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
+    clientSocket.settimeout(0.5) # 500 ms timeout
     serverAddr = (ip, port)
     try:
         clientSocket.connect(serverAddr)
@@ -30,9 +33,9 @@ def client(ip, port, file, reli):
 
     msg, serverAddr = clientSocket.recvfrom(1472) # venter på syn ack pakken
     header = msg[:12] # tar ut headeren
-    header_from_msg = unpack(header_format, header) # pakker ut headeren
-    syn, ack, fin = parse_flags(header_from_msg[2]) # tar ut flaggene
-    if header_from_msg[2] == (8 | 4): # 8 | 4 = syn og ack flag
+    seq, ack, flags, win = unpack(header_format, header)
+    syn, ack, fin = parse_flags(flags) # tar ut flaggene
+    if flags == (8 | 4): # 8 | 4 = syn og ack flag
         print("syn-ack pakke mottatt")
         data = b'' # ingen data i ack pakken
         flags = 4
@@ -50,29 +53,14 @@ def client(ip, port, file, reli):
     elif reli == 'SR':
         with open(file, 'rb') as f:
             print('lager pakke')
-            data = f.read(1460)
-            seq_number = 1
+            seq_number = 0
             ack_number = 0
-            window = 0
-            flags = 0
 
-            while data:
-                packet = create_packet(seq_number, ack_number, flags, window, data)
-                print('sender pakke')
-                clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
-                print(f"Packet {seq_number} sent successfully")
-                seq_number += 1
-                ack_number += 1
-                data = f.read(1460)       
-
-            # Send fin flag
-            flags = 2 # fin flag
-            fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
-            clientSocket.sendto(fin_packet, serverAddr)    
+ 
 
     clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
-def server(ip, port, reli):
+def server(ip, port, reli, test_case):
     addr = (ip, port)
     serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
      
@@ -83,6 +71,7 @@ def server(ip, port, reli):
         sys.exit()
 
     print(f"Server is listening")
+
 
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
@@ -121,7 +110,14 @@ def server(ip, port, reli):
         
         elif synflag == 0 and ackflag == 0:
             if reli == 'SR':
-                SR(serverSocket, data, seq, finflag, output_file)
+                # Sender ack for første pakke
+                acknowledgment_number = seq
+                window = 5
+                flags = 4 # we are setting the ack flag
+                ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
+                serverSocket.sendto(ack_packet, addr)
+                print(f"sent ack for packet {seq}")
+                SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:    
                 with open(output_file, 'ab') as f:
                     f.write(data) # Skriver data til filen
@@ -130,6 +126,8 @@ def server(ip, port, reli):
                 window = 0
                 flags = 4 # we are setting the ack flag
 
+                if handle_test_case(test_case, serverSocket):
+                    continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
                 ack = create_packet(seq, acknowledgment_number, flags, window, b'')
                 print (f'sending an acknowledgment packet of header size={len(ack)}')
                 serverSocket.sendto(ack, addr) # send the packet to the client
@@ -175,18 +173,27 @@ def main():
     parser.add_argument('-p','--port', type=check_port, default=8083)
     parser.add_argument('-f','--file')
     parser.add_argument('-r', '--reliability', type=str, choices=['stop_and_wait','GBN','SR'])
+    parser.add_argument('-t', '--test_case', type=str, choices=['loss', 'skip_ack'])
     
 
     args = parser.parse_args()
 
+    server_reli = None
+    
     if args.server:
-        server(args.ip, args.port, args.reliability)
+        server_reli = args.reliability
+        serverSocket = server(args.ip, args.port, args.reliability, args.test_case)
+        if args.test_case:
+            handle_test_case(args.test_case, serverSocket)
     
     elif args.client:
-        client(args.ip, args.port, args.file, args.reliability)
+        client_reli = args.reliability
+        clientSocket = client(args.ip, args.port, args.file, args.reliability, args.test_case)
+        if args.test_case:
+            handle_test_case(args.test_case, clientSocket)
     
     else:
-        print("You need to specify either -s or -c")
+        ("You need to specify either -s or -c")
         sys.exit()
 
 if __name__ == '__main__':
