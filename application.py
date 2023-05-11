@@ -76,12 +76,10 @@ def server(ip, port, reli, test_case):
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
 
+    packet_num = 1
     while True:
         msg, addr = serverSocket.recvfrom(1472)
-
         header_from_msg = msg[:12]
-        print(len(header_from_msg))
-
         data = msg[12:]
         print(f"Received {len(data)} bytes of data")
         #unpack the header
@@ -118,9 +116,12 @@ def server(ip, port, reli, test_case):
                 serverSocket.sendto(ack_packet, addr)
                 print(f"sent ack for packet {seq}")
                 SR(serverSocket, data, seq, finflag, output_file, test_case)
-            else:    
-                with open(output_file, 'ab') as f:
-                    f.write(data) # Skriver data til filen
+            else:  
+
+                if seq == packet_num:
+                    packet_num +=1
+                    with open(output_file, 'ab') as f:
+                        f.write(data) # Skriver data til filen
 
                 acknowledgment_number = seq
                 window = 0
