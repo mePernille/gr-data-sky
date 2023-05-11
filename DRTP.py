@@ -46,6 +46,7 @@ def handle_test_case(test_case, clientSocket):
             return True # Returnerer True for å indikere at ack skal droppes
         else:
             return False # Returnerer False for å indikere at ack skal sendes
+        
 
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
@@ -175,6 +176,7 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
                 continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
             ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
             serverSocket.sendto(ack_packet, addr)
+            print(f"ACK {acknowledgment_number} sent")
 
             
     with open(output_file, 'ab') as f:
