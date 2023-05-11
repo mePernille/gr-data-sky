@@ -114,7 +114,7 @@ def client(ip, port, file, reli, test_case):
             clientSocket.sendto(fin_packet, serverAddr)
             print("Sent fin packet")
 
-    clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
+    clientSocket.close() # lukker client socket
 
 def server(ip, port, reli, test_case):
     addr = (ip, port)
@@ -128,21 +128,19 @@ def server(ip, port, reli, test_case):
 
     print(f"Server is listening")
 
-
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
 
+    packet_num = 1 # used to count received pakets
+
     while True:
         msg, addr = serverSocket.recvfrom(1472)
-
         header_from_msg = msg[:12]
-        print(len(header_from_msg))
-
         data = msg[12:]
         print(f"Received {len(data)} bytes of data")
         #unpack the header
         seq, ack, flags, win = unpack(header_format, header_from_msg)
-
+        
         #parse the flag field
         synflag, ackflag, finflag = parse_flags(flags)
 
@@ -158,7 +156,7 @@ def server(ip, port, reli, test_case):
             flags = 12 # we are setting the ack and syn flags
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
-            print (f'sending an acknowledgment packet of header size={len(synAck)}')
+            print (f'sending acknowledgment {sequence_number}')
             serverSocket.sendto(synAck, addr) # send the packet to the client
 
         if ackflag == 4:
@@ -168,7 +166,11 @@ def server(ip, port, reli, test_case):
             if reli == 'SR':
                 SR(serverSocket, data, seq, finflag, output_file)
             else:    
-                with open(output_file, 'ab') as f:
+                print(f"seq number: {seq} packet numer: {packet_num}")
+                if seq == packet_num:
+                  packet_num += 1 # modtager ikke seq number på den fem første pakker
+                  print(f"pakcket number efter økning {packet_num}") 
+                  with open(output_file, 'ab') as f:
                     f.write(data) # Skriver data til filen
 
                 acknowledgment_number = seq
@@ -178,7 +180,7 @@ def server(ip, port, reli, test_case):
                 if handle_test_case(test_case, serverSocket):
                     continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
                 ack = create_packet(seq, acknowledgment_number, flags, window, b'')
-                print (f'sending an acknowledgment packet of header size={len(ack)}')
+                print (f'sending an ack')
                 serverSocket.sendto(ack, addr) # send the packet to the client
                 
                 if finflag == 2:
