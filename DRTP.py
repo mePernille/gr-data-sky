@@ -98,10 +98,6 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
         
     return True
 
-def window_size(number_packets, start):
-     
-    return min(5, number_packets - start)   
-
 def GBN(clientSocket, serverAddr, file):
     global start
 
@@ -127,6 +123,7 @@ def GBN(clientSocket, serverAddr, file):
 
             while start < number_packets:
                 while seq_number < start + window+1:
+                    packet = create_packet(seq_number, ack_number, flags, window, data)
                     clientSocket.sendto(packet, serverAddr)
                     print(f"packet {seq_number} sent")
                     seq_number += 1
@@ -136,6 +133,7 @@ def GBN(clientSocket, serverAddr, file):
                     if seq_number == ack_number:
                         ack_number +=1
                         seq_number += 1
+                    print(f"seq nr er : {seq_number} start nr er : {start}")    
                 else:
                     print("resending")
                     seq_number = start
@@ -145,6 +143,8 @@ def GBN(clientSocket, serverAddr, file):
         fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
         clientSocket.sendto(fin_packet, serverAddr)
         print("Sent fin packet")
+
+    clientSocket.close()    
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
     received_packets = {first_seq: first_data}
