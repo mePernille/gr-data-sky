@@ -55,69 +55,8 @@ def client(ip, port, file, reli, test_case):
             print('lager pakke')
             seq_number = 0
             ack_number = 0
-            window = 5
-            flags = 0
-            unacked_packets = {} # dictionary to hold the packets that have been sent but not yet acknowledged
-            unacked_seq_numbers = [] # list to hold the sequence numbers of the packets that have been sent in the order they were sent
 
-            # Fyll vinduet første gang
-            for _ in range(window):
-                data = f.read(1460)
-                if not data:
-                    break
-
-                seq_number += 1
-                packet = create_packet(seq_number, ack_number, flags, window, data)
-                print('sender pakke')
-                clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
-                print(f"Packet {seq_number} sent successfully")
-                unacked_packets[seq_number] = packet
-            
-            # Håndter innkommende ACK og send nye pakker
-            while unacked_packets or data:
-                ready = select.select([clientSocket], [], [], 0.5)
-                if ready[0]:
-                    msg, serverAddr = clientSocket.recvfrom(1472)
-                    header = msg[:12]
-                    seq, ack, flags, win = unpack(header_format, header)
-                    _, ack_flag, _ = parse_flags(flags)
-
-                    if ack_flag == 4:
-                        if ack in unacked_packets:
-                            print(f"Received ACK for packet {ack}")
-                            del unacked_packets[ack]
-                            if ack in unacked_seq_numbers:
-                                unacked_seq_numbers.remove(ack)
-                    
-                    # Send en ny pakke for hver mottatt ACK
-                    data = f.read(1460)
-                    if data:
-                        if handle_test_case(test_case, clientSocket):
-                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
-                            continue
-                        else:
-                            seq_number += 1
-                        packet = create_packet(seq_number, ack_number, flags, window, data)
-                        print('sender pakke')
-                        clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
-                        print(f"Packet {seq_number} sent successfully")
-                        unacked_packets[seq_number] = packet
-                        unacked_seq_numbers.append(seq_number)
-                    
-                    if not ready[0] and unacked_seq_numbers:
-                        print("Timeout, no ACK received")
-                        # Resend all unacked packets
-                        oldest_unacked_seq_number = unacked_seq_numbers[0]
-                        packet_to_resend = unacked_packets[oldest_unacked_seq_number]
-                        clientSocket.sendto(packet_to_resend, serverAddr)
-                        print(f"Resent packet {oldest_unacked_seq_number}")
-                
-            
-            # Send fin flag
-            flags = 2 # fin flag
-            fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
-            clientSocket.sendto(fin_packet, serverAddr)
-            print("Sent fin packet")
+ 
 
     clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
