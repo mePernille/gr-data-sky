@@ -45,7 +45,7 @@ def client(ip, port, file, reli):
         stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
     elif reli == 'GBN':
-        GBN(clientSocket, serverAddr, packet)
+        GBN(clientSocket, serverAddr, file)
 
     elif reli == 'SR':
         with open(file, 'rb') as f:
