@@ -82,10 +82,10 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
     clientSocket.settimeout(0.5) # 500 ms timeout
     try:
         msg, serverAddr = clientSocket.recvfrom(1472)
-        print("Recived ack")
         header = msg[:12]
         seq, ack, flags, win = unpack(header_format, header)
         _, ack_flag, _ = parse_flags(flags)
+        print(f"Recived ack {ack}")
         
 
         if ack_flag == 4 and ack == expected_ack:

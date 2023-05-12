@@ -11,8 +11,7 @@ from DRTP import create_packet
 from DRTP import parse_flags
 from DRTP import header_format
 from DRTP import handle_test_case
-import select
-
+from DRTP import wait_for_ack
 
 
 def client(ip, port, file, reli, test_case):
@@ -51,12 +50,48 @@ def client(ip, port, file, reli, test_case):
         GBN(clientSocket, serverAddr, file)
 
     elif reli == 'SR':
-        with open(file, 'rb') as f:
-            print('lager pakke')
-            seq_number = 0
-            ack_number = 0
+        global start
 
- 
+        with open(file, 'rb') as f:
+            print('Creating packets')
+            seq_number = 1
+            ack_number = 0
+            window = 5
+            flags = 0
+            unacked_packets = []
+
+            start = 0
+            while True:
+                data = f.read(1460)
+                if not data:
+                    break
+                packet = create_packet(seq_number, ack_number, flags, window, data)
+                unacked_packets.append((seq_number, packet))
+                
+                number_packets = len(unacked_packets)
+
+                while start < number_packets:
+                    while seq_number < start + window + 1:
+                        packet = create_packet(seq_number, ack_number, flags, window, data)
+                        clientSocket.sendto(packet, serverAddr)
+                        print(f"packet {seq_number} sent")
+                        seq_number += 1
+
+                    if wait_for_ack(clientSocket, seq_number, serverAddr) == True:
+                        start +=1
+                        if seq_number == ack_number:
+                            first_unacked_packet = unacked_packets.pop(0) # Retrieve and remove the first element
+                            ack_number +=1
+                            seq_number += 1
+                    else:
+                        print("resending")
+                        seq_number = start
+    
+
+            flags = 2 # fin flag
+            fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
+            clientSocket.sendto(fin_packet, serverAddr)
+            print("Sent fin packet")
 
     clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
 
