@@ -112,7 +112,7 @@ def GBN(clientSocket, serverAddr, file):
 
         start = 0
         while True:
-            data = f.read(1064)
+            data = f.read(1460)
             if not data:
                 break
             packet = create_packet(seq_number, ack_number, flags, window, data)

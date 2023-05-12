@@ -111,7 +111,9 @@ def server(ip, port, reli, test_case):
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
 
-    packet_num = 1 # used to count received packets
+    packet_num = 0 # used to count received packets
+
+    received_seq = set() # keep track of received sequence numbers
 
     while True:
         msg, addr = serverSocket.recvfrom(1472)
@@ -120,6 +122,11 @@ def server(ip, port, reli, test_case):
         print(f"Received {len(data)} bytes of data")
         #unpack the header
         seq, ack, flags, win = unpack(header_format, header_from_msg)
+
+        if seq in received_seq:
+            continue
+        else:
+            received_seq.add(seq)
 
         #parse the flag field
         synflag, ackflag, finflag = parse_flags(flags)
@@ -153,12 +160,13 @@ def server(ip, port, reli, test_case):
                 print(f"sent ack for packet {seq}")
                 SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:  
-
+                packet_num = len(received_seq) -1
+                print(f"seq number is : {seq} and packet number is {packet_num}")
                 if seq == packet_num:
                     packet_num +=1 
                     with open(output_file, 'ab') as f:
                         f.write(data) # Skriver data til filen
-                        print(f"skriver {packet_num -1} til filen")
+                        print(f"skriver {seq} til filen")
                        
 
                 acknowledgment_number = seq
