@@ -31,7 +31,7 @@ seq_counter = 0
 def handle_test_case(test_case, clientSocket):
     global seq_counter
     global ack_counter
-    #print(f"handle_test_case: test_case={test_case}, seq_counter={seq_counter}, ack_counter={ack_counter}")  # Print current values
+
     if test_case == 'loss':
         seq_counter += 1
         if seq_counter == 20: # Skipper hver 20. pakke
@@ -47,10 +47,13 @@ def handle_test_case(test_case, clientSocket):
         else:
             return False # Returnerer False for å indikere at ack skal sendes
         
+                 
 
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
+    # Sender ny pakke, men ikke med samme seq nr. Det fungerer ikke å endre
+    # på grunn av test casen
     with open(file, 'rb') as f:
-        print('lager pakke')
+        #print('lager pakke')
         data = f.read(1460)
         seq_number = 1
         ack_number = 0
@@ -59,18 +62,19 @@ def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
 
         while data:
             packet = create_packet(seq_number, ack_number, flags, window, data)
-            print('sender pakke')
+            print(f"Packet {seq_number} sent successfully")
             clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
 
             while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
                 print("lost")
                 clientSocket.sendto(packet,serverAddr)
+                #seq_number -= 1 Skulle ha vært der for å sende pakken på nytt, men det funker ikke med test casen
                 break
 
-            print(f"Packet {seq_number} sent successfully")
             seq_number += 1
             ack_number += 1
             data = f.read(1460)
+
         
         # Send fin flag
         flags = 2 # fin flag
@@ -98,7 +102,10 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
         
     return True
 
-def GBN(clientSocket, serverAddr, file):
+def GBN(clientSocket, serverAddr, file, test_case):
+    # Når man kjører skip_ack så fortsetter den å sende pakker selv om den ikke får ack
+    # Den hopper over ack 20 og sender så pakke 24.
+    # Med test case loss så printer server skip pakke, men GBN sender fortsatt pakke 20
     global start
 
     with open(file, 'rb') as f:
@@ -132,7 +139,11 @@ def GBN(clientSocket, serverAddr, file):
                     start +=1
                     if seq_number == ack_number:
                         ack_number +=1
-                        seq_number += 1
+                        if handle_test_case(test_case, clientSocket):
+                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                            continue
+                        else:
+                            seq_number += 1
                     print(f"seq nr er : {seq_number} start nr er : {start}")    
                 else:
                     print("resending")
@@ -147,6 +158,11 @@ def GBN(clientSocket, serverAddr, file):
     clientSocket.close()    
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
+    # Sender fin flag, men mottar ikke fin flag
+    # Skip ack printer skip ack, og den hopper over ack 21.
+    # Den mottar ikke ack 21 men det kommer ingen feilmelding og den fortsetter å sende pakke 25
+    # på test case loss mottar den ikke ack 21, men det kommer ingen feilmelding.
+    # Server mottar alle pakker
     received_packets = {first_seq: first_data}
     fin_received = False
 
@@ -170,7 +186,7 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
             window = 5
             flags = 4 # we are setting the ack flag
             if handle_test_case(test_case, serverSocket):
-                continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
+                continue # hvis vi skal skippe en ack så går vi tilbake til starten av while løkken
             ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
             serverSocket.sendto(ack_packet, addr)
             print(f"ACK {acknowledgment_number} sent")

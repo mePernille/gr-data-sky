@@ -43,11 +43,10 @@ def client(ip, port, file, reli, test_case):
 
 
     if reli == 'stop_and_wait':
-        
         stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
     elif reli == 'GBN':
-        GBN(clientSocket, serverAddr, file)
+        GBN(clientSocket, serverAddr, file, test_case)
 
     elif reli == 'SR':
         global start
@@ -119,7 +118,7 @@ def server(ip, port, reli, test_case):
         msg, addr = serverSocket.recvfrom(1472)
         header_from_msg = msg[:12]
         data = msg[12:]
-        print(f"Received {len(data)} bytes of data")
+        #print(f"Received {len(data)} bytes of data")
         #unpack the header
         seq, ack, flags, win = unpack(header_format, header_from_msg)
 
@@ -147,7 +146,7 @@ def server(ip, port, reli, test_case):
             serverSocket.sendto(synAck, addr) # send the packet to the client
 
         if ackflag == 4:
-            print("received ack packet")
+            print("received ack")
         
         elif synflag == 0 and ackflag == 0:
             if reli == 'SR':
@@ -161,12 +160,12 @@ def server(ip, port, reli, test_case):
                 SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:  
                 packet_num = len(received_seq) -1
-                print(f"seq number is : {seq} and packet number is {packet_num}")
+                #print(f"seq number is : {seq} and packet number is {packet_num}")
                 if seq == packet_num:
                     packet_num +=1 
                     with open(output_file, 'ab') as f:
                         f.write(data) # Skriver data til filen
-                        print(f"skriver {seq} til filen")
+                        #print(f"skriver {seq} til filen")
                        
 
                 acknowledgment_number = seq
@@ -176,7 +175,7 @@ def server(ip, port, reli, test_case):
                 if handle_test_case(test_case, serverSocket):
                     continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
                 ack = create_packet(seq, acknowledgment_number, flags, window, b'')
-                print ('sending ack')
+                #print ('sending ack')
                 serverSocket.sendto(ack, addr) # send the packet to the client
                 
                 if finflag == 2:
