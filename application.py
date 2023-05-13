@@ -46,7 +46,7 @@ def client(ip, port, file, reli, test_case):
         stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
     elif reli == 'GBN':
-        GBN(clientSocket, serverAddr, file)
+        GBN(clientSocket, serverAddr, file, test_case)
 
     elif reli == 'SR':
         global start

@@ -102,7 +102,10 @@ def wait_for_ack(clientSocket, expected_ack, serverAddr):
         
     return True
 
-def GBN(clientSocket, serverAddr, file):
+def GBN(clientSocket, serverAddr, file, test_case):
+    # Når man kjører skip_ack så fortsetter den å sende pakker selv om den ikke får ack
+    # Den hopper over ack 20 og sender så pakke 24.
+    # Med test case loss så printer server skip pakke, men GBN sender fortsatt pakke 20
     global start
 
     with open(file, 'rb') as f:
@@ -136,7 +139,11 @@ def GBN(clientSocket, serverAddr, file):
                     start +=1
                     if seq_number == ack_number:
                         ack_number +=1
-                        seq_number += 1
+                        if handle_test_case(test_case, clientSocket):
+                            seq_number += 2 # hvis vi skal skippe en pakke så øker vi seq_number med 2
+                            continue
+                        else:
+                            seq_number += 1
                     print(f"seq nr er : {seq_number} start nr er : {start}")    
                 else:
                     print("resending")
@@ -151,6 +158,11 @@ def GBN(clientSocket, serverAddr, file):
     clientSocket.close()    
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
+    # Sender fin flag, men mottar ikke fin flag
+    # Skip ack printer skip ack, og den hopper over ack 21.
+    # Den mottar ikke ack 21 men det kommer ingen feilmelding og den fortsetter å sende pakke 25
+    # på test case loss mottar den ikke ack 21, men det kommer ingen feilmelding.
+    # Server mottar alle pakker
     received_packets = {first_seq: first_data}
     fin_received = False
 
@@ -174,7 +186,7 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
             window = 5
             flags = 4 # we are setting the ack flag
             if handle_test_case(test_case, serverSocket):
-                continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
+                continue # hvis vi skal skippe en ack så går vi tilbake til starten av while løkken
             ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
             serverSocket.sendto(ack_packet, addr)
             print(f"ACK {acknowledgment_number} sent")
