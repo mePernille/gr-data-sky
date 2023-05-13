@@ -31,7 +31,7 @@ seq_counter = 0
 def handle_test_case(test_case, clientSocket):
     global seq_counter
     global ack_counter
-    #print(f"handle_test_case: test_case={test_case}, seq_counter={seq_counter}, ack_counter={ack_counter}")  # Print current values
+
     if test_case == 'loss':
         seq_counter += 1
         if seq_counter == 20: # Skipper hver 20. pakke
@@ -47,10 +47,13 @@ def handle_test_case(test_case, clientSocket):
         else:
             return False # Returnerer False for å indikere at ack skal sendes
         
+                 
 
 def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
+    # Sender ny pakke, men ikke med samme seq nr. Det fungerer ikke å endre
+    # på grunn av test casen
     with open(file, 'rb') as f:
-        print('lager pakke')
+        #print('lager pakke')
         data = f.read(1460)
         seq_number = 1
         ack_number = 0
@@ -59,18 +62,19 @@ def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
 
         while data:
             packet = create_packet(seq_number, ack_number, flags, window, data)
-            print('sender pakke')
+            print(f"Packet {seq_number} sent successfully")
             clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
 
             while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
                 print("lost")
                 clientSocket.sendto(packet,serverAddr)
+                #seq_number -= 1 Skulle ha vært der for å sende pakken på nytt, men det funker ikke med test casen
                 break
 
-            print(f"Packet {seq_number} sent successfully")
             seq_number += 1
             ack_number += 1
             data = f.read(1460)
+
         
         # Send fin flag
         flags = 2 # fin flag
