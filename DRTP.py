@@ -6,6 +6,7 @@ from struct import *
 import sys
 import random
 
+
 header_format = '!IIHH'
 
 # from Safiqul header templet
@@ -46,12 +47,15 @@ def handle_test_case(test_case, clientSocket):
         else:
             return False # Returnerer False for å indikere at ack skal sendes
         
-                 
 
 def stop_and_wait(clientSocket, file, serverAddr): # taking in the socket to send from, the file we want to send, and the server addres we are sending to
     # Sender ny pakke, men ikke med samme seq nr. Det fungerer ikke å endre
     # på grunn av test casen
-    with open(file, 'rb') as f: # opening the file 
+    start_time = time.time()
+    elapsed_time = 0
+    bytes_sent = 0
+    with open(file, 'rb') as f:
+        #print('lager pakke')
         data = f.read(1460)
         # setting seq, ack, window and flags before creating the packet
         seq_number = 1 
@@ -74,12 +78,16 @@ def stop_and_wait(clientSocket, file, serverAddr): # taking in the socket to sen
             seq_number += 1 # while we receive an ack, the seq number increases 
             ack_number += 1 # the same applys to the ack number
             data = f.read(1460)
-
         
         # Send fin flag
-        flags = 2 # setting the fin flag
-        fin_packet = create_packet(seq_number, ack_number, flags, window, b'') # creating the fin packet, setting b'' so the packet only contain the header
-        clientSocket.sendto(fin_packet, serverAddr) 
+        flags = 2 # fin flag
+        fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
+        clientSocket.sendto(fin_packet, serverAddr)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        bytes_sent = seq_number * 1460
+        bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
+        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
 
             
 def wait_for_ack(clientSocket, expected_ack, serverAddr):
@@ -106,6 +114,9 @@ def GBN(clientSocket, serverAddr, file, test_case):
     # Når man kjører skip_ack så fortsetter den å sende pakker selv om den ikke får ack
     # Den hopper over ack 20 og sender så pakke 24.
     # Med test case loss så printer server skip pakke, men GBN sender fortsatt pakke 20
+    start_time = time.time()
+    elapsed_time = 0
+    bytes_sent = 0
     global start
 
     with open(file, 'rb') as f:
@@ -153,7 +164,12 @@ def GBN(clientSocket, serverAddr, file, test_case):
         flags = 2 # fin flag
         fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
         clientSocket.sendto(fin_packet, serverAddr)
-        print("Sent fin packet")
+        #print("Sent fin packet")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        bytes_sent = seq_number * 1460
+        bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
+        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
 
     clientSocket.close()    
 
@@ -162,9 +178,11 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
     # Den mottar ikke ack 21 men det kommer ingen feilmelding og den fortsetter å sende pakke 25
     # på test case loss mottar den ikke ack 21, men det kommer ingen feilmelding.
     # Server mottar alle pakker
+    start_time = time.time()
+    elapsed_time = 0
+    bytes_sent = 0
     received_packets = {first_seq: first_data}
     fin_received = False
-
 
     while not fin_received:
         msg, addr = serverSocket.recvfrom(1472)
@@ -175,7 +193,12 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
 
         if finflag == 2:
             fin_received = True
-            print("Fin received")
+            #print("Fin received")
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            bytes_sent = seq * 1460
+            bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
+            print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
             break
 
         if seq not in received_packets:
@@ -201,6 +224,9 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
 def send_SR(clientSocket, serverAddr, file, test_case):
     # Sender filen, men når jeg kjører skip_ack så hopper den bare over ack 21 uten å 
     # gå inn i else: resending. 
+    start_time = time.time()
+    elapsed_time = 0
+    bytes_sent = 0
     global start
 
     with open(file, 'rb') as f:
@@ -258,4 +284,9 @@ def send_SR(clientSocket, serverAddr, file, test_case):
         flags = 2  # fin flag
         fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
         clientSocket.sendto(fin_packet, serverAddr)
-        print("Sent fin packet")
+        #print("Sent fin packet")
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        bytes_sent = seq_number * 1460
+        bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
+        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
