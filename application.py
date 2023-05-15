@@ -106,7 +106,8 @@ def server(ip, port, reli, test_case):
             serverSocket.sendto(synAck, addr) # send the packet to the client
 
         if ackflag == 4:
-            print("received ack")
+            #print("received ack")
+            continue
 
         
         elif synflag == 0 and ackflag == 0:
