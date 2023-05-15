@@ -1,7 +1,5 @@
-# DRTP
-# first header from client to server with sin flag
-# server sends syn ack
-# now connection are etasblish
+# This file contains all the reliablity functions and some helper functions to make packets and handle test cases.
+
 import time
 import socket
 from struct import *
@@ -11,13 +9,14 @@ import random
 
 header_format = '!IIHH'
 
-def create_packet(seq, ack, flags, win, data):
+# from Safiqul header templet
+def create_packet(seq, ack, flags, win, data): 
     header = pack(header_format, seq, ack, flags, win) 
 
     packet = header + data
 
     return packet  
-
+# from Safiqul header templet
 def parse_flags(flags):
     #we only parse the first 3 fields because we're not 
     #using rst in our implementation
@@ -49,7 +48,7 @@ def handle_test_case(test_case, clientSocket):
             return False # Returnerer False for å indikere at ack skal sendes
         
 
-def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
+def stop_and_wait(clientSocket, file, serverAddr): # taking in the socket to send from, the file we want to send, and the server addres we are sending to
     # Sender ny pakke, men ikke med samme seq nr. Det fungerer ikke å endre
     # på grunn av test casen
     start_time = time.time()
@@ -58,24 +57,26 @@ def stop_and_wait(clientSocket, file, serverAddr): # denne må tage ind headeren
     with open(file, 'rb') as f:
         #print('lager pakke')
         data = f.read(1460)
-        seq_number = 1
+        # setting seq, ack, window and flags before creating the packet
+        seq_number = 1 
         ack_number = 0
-        window = 0
+        window = 0 # in this function the window will not be used
         flags = 0
 
         while data:
-            packet = create_packet(seq_number, ack_number, flags, window, data)
+            packet = create_packet(seq_number, ack_number, flags, window, data) # creating the packet
             print(f"Packet {seq_number} sent successfully")
-            clientSocket.sendto(packet, serverAddr) # Bruker sendto siden vi sender filen over UDP
+            clientSocket.sendto(packet, serverAddr) # the client sends the packet, using the  build in function sendto(), since its UDP
 
-            while wait_for_ack(clientSocket, seq_number, serverAddr) == False:
+            # calling the wait_for_Ack to chek if we get an ack, then proceeding
+            while wait_for_ack(clientSocket, seq_number, serverAddr) == False: 
                 print("lost")
-                clientSocket.sendto(packet,serverAddr)
+                clientSocket.sendto(packet,serverAddr) # if we do not receive an ack.... ?
                 #seq_number -= 1 Skulle ha vært der for å sende pakken på nytt, men det funker ikke med test casen
                 break
 
-            seq_number += 1
-            ack_number += 1
+            seq_number += 1 # while we receive an ack, the seq number increases 
+            ack_number += 1 # the same applys to the ack number
             data = f.read(1460)
         
         # Send fin flag
