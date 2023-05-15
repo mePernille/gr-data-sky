@@ -8,8 +8,8 @@ to run the server use the following flags:
 
 
 to run the client
--c
--i
--p
--r
--f to specify the filename you will be tranfering 
+-c to envoke the client side.
+-i type in the server i adress
+-p type in the port number that the server is using
+-r specify the SAME reliability method as the server is running in
+-f to specify the filename you will be tranfering, there is a picture of a dog in the applications ready to be transferd.
