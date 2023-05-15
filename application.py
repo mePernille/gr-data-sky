@@ -65,7 +65,6 @@ def server(ip, port, reli, test_case):
 
     print(f"Server is listening")
 
-
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
 
@@ -93,7 +92,7 @@ def server(ip, port, reli, test_case):
         synflag, ackflag, finflag = parse_flags(flags)
 
         if synflag == 8:
-            print("received syn packet")
+            #print("received syn")
             #an acknowledgment packet from the receiver should have no data
             #only the header with acknowledgment number, ack_flag=1, win=6400
             
@@ -104,11 +103,12 @@ def server(ip, port, reli, test_case):
             flags = 12 # we are setting the ack and syn flags
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
-            print ('Sending syn ack')
+            #print ('Sending syn ack')
             serverSocket.sendto(synAck, addr) # send the packet to the client
 
         if ackflag == 4:
             print("received ack")
+
         
         elif synflag == 0 and ackflag == 0:
             if reli == 'SR':
@@ -118,7 +118,7 @@ def server(ip, port, reli, test_case):
                 flags = 4 # we are setting the ack flag
                 ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
                 serverSocket.sendto(ack_packet, addr)
-                print(f"sent ack for packet {seq}")
+                #print(f"sent ack for packet {seq}")
                 SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:  
                 packet_num = len(received_seq) -1
@@ -129,7 +129,6 @@ def server(ip, port, reli, test_case):
                         f.write(data) # Skriver data til filen
                         #print(f"skriver {seq} til filen")
                        
-
                 acknowledgment_number = seq
                 window = 0
                 flags = 4 # we are setting the ack flag
@@ -140,7 +139,7 @@ def server(ip, port, reli, test_case):
                 serverSocket.sendto(ack, addr) # send the packet to the client
                 
                 if finflag == 2: # checking if the finflag is set.
-                    print("received fin packet")
+                    #print("received fin packet")
                     break
     
 
