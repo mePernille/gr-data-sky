@@ -130,7 +130,7 @@ def server(ip, port, reli, test_case):
             #print("received syn")            
             sequence_number = 0
             acknowledgment_number = 1   # an ack for the last sequence
-            window = 0 # window value 
+            window = 64 # window value 
             flags = 12 # we are setting the ack and syn flags
             # Creating a syn-ack packet
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
@@ -148,7 +148,7 @@ def server(ip, port, reli, test_case):
             if reli == 'SR':
                 # Sending an ack for the first packet
                 acknowledgment_number = seq
-                window = 5
+                window = 64
                 flags = 4 # we are setting the ack flag
                 # Creating an ack packet
                 ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
@@ -169,7 +169,7 @@ def server(ip, port, reli, test_case):
                 
                 # Setting the acknowledgment number for the ack as the sequence number of the packet
                 acknowledgment_number = seq
-                window = 0
+                window = 64
                 flags = 4 # we are setting the ack flag
 
                 # If handle_test_case returns true, we skip sending the ack
