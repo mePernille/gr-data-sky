@@ -42,7 +42,6 @@ def client(ip, port, file, reli, test_case):
         ackPacket = create_packet(0, 1, flags, 0, data) # lager en ack pakke
         clientSocket.sendto(ackPacket, serverAddr) # sender ack pakken
 
-
     if reli == 'stop_and_wait':
         stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
 
@@ -143,11 +142,6 @@ def server(ip, port, reli, test_case):
                 
                 if finflag == 2:
                     print("received fin packet")
-                    end_time = time.time()
-                    elapsed_time = end_time - start_time
-                    bytes_sent = seq * 1460
-                    bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-                    print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
                     break
     
 
