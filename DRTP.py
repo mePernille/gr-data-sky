@@ -274,7 +274,6 @@ def send_SR(clientSocket, serverAddr, file, test_case):
                     #print("Current unacked_packets:", list(unacked_packets.keys()))
                     seq_number = (start + window)
 
-
             # Break the loop when the file is fully read 
             if not data:
                 break
