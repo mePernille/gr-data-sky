@@ -14,7 +14,6 @@ from DRTP import handle_test_case
 from DRTP import wait_for_ack
 from DRTP import send_SR
 
-
 def client(ip, port, file, reli, test_case):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
     clientSocket.settimeout(0.5) # 500 ms timeout
@@ -36,12 +35,11 @@ def client(ip, port, file, reli, test_case):
     seq, ack, flags, win = unpack(header_format, header)
     syn, ack, fin = parse_flags(flags) # tar ut flaggene
     if flags == (8 | 4): # 8 | 4 = syn og ack flag
-        print("syn-ack pakke mottatt")
+        #print("syn-ack pakke mottatt")
         data = b'' # no data in the ack packet
         flags = 4
         ackPacket = create_packet(0, 1, flags, 0, data) # creating the ack packet
         clientSocket.sendto(ackPacket, serverAddr) # sending ack packet
-
 
     if reli == 'stop_and_wait':
         stop_and_wait(clientSocket, file, serverAddr) # sending clientsocket, file and serveraddress
@@ -65,7 +63,6 @@ def server(ip, port, reli, test_case):
         sys.exit()
 
     print(f"Server is listening")
-
 
     output_file = 'received_file.jpg'
     open(output_file, 'w').close() # sletter filen hvis den allerede eksisterer
@@ -94,7 +91,7 @@ def server(ip, port, reli, test_case):
         synflag, ackflag, finflag = parse_flags(flags)
 
         if synflag == 8:
-            print("received syn packet")
+            #print("received syn")
             #an acknowledgment packet from the receiver should have no data
             #only the header with acknowledgment number, ack_flag=1, win=6400
             
@@ -105,11 +102,13 @@ def server(ip, port, reli, test_case):
             flags = 12 # we are setting the ack and syn flags
 
             synAck = create_packet(sequence_number, acknowledgment_number, flags, window, b'')
-            print ('Sending syn ack')
+            #print ('Sending syn ack')
             serverSocket.sendto(synAck, addr) # send the packet to the client
 
         if ackflag == 4:
-            print("received ack")
+            #print("received ack")
+            continue
+
         
         elif synflag == 0 and ackflag == 0:
             if reli == 'SR':
@@ -119,7 +118,7 @@ def server(ip, port, reli, test_case):
                 flags = 4 # we are setting the ack flag
                 ack_packet = create_packet(0, acknowledgment_number, flags, window, b'')
                 serverSocket.sendto(ack_packet, addr)
-                print(f"sent ack for packet {seq}")
+                #print(f"sent ack for packet {seq}")
                 SR(serverSocket, data, seq, finflag, output_file, test_case)
             else:  
                 packet_num = len(received_seq) -1
@@ -130,7 +129,6 @@ def server(ip, port, reli, test_case):
                         f.write(data) # Skriver data til filen
                         #print(f"skriver {seq} til filen")
                        
-
                 acknowledgment_number = seq
                 window = 0
                 flags = 4 # we are setting the ack flag
@@ -141,12 +139,7 @@ def server(ip, port, reli, test_case):
                 serverSocket.sendto(ack, addr) # send the packet to the client
                 
                 if finflag == 2: # checking if the finflag is set.
-                    print("received fin packet")
-                    end_time = time.time()
-                    elapsed_time = end_time - start_time
-                    bytes_sent = seq * 1460
-                    bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-                    print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
+                    #print("received fin packet")
                     break
     
 
