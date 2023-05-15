@@ -6,7 +6,7 @@ from struct import *
 import re
 from DRTP import stop_and_wait
 from DRTP import GBN
-from DRTP import SR # havde problemer med at den ikke fandt funktionerne i DRTP filen hvis de blev importert
+from DRTP import SR
 from DRTP import create_packet
 from DRTP import parse_flags
 from DRTP import header_format
@@ -27,9 +27,9 @@ def client(ip, port, file, reli, test_case):
         sys.exit()  
     
     flags = 8 # 8 = syn flag
-    data = b'' # ingen data i syn pakken
-    packet = create_packet(0, 0, flags, 0, data) # lager en syn pakke
-    clientSocket.sendto(packet, serverAddr) # sender syn pakken
+    data = b'' # no data in the syn-packet
+    packet = create_packet(0, 0, flags, 0, data) # creating a syn-packet
+    clientSocket.sendto(packet, serverAddr) # sending it
 
     msg, serverAddr = clientSocket.recvfrom(1472) # venter på syn ack pakken
     header = msg[:12] # tar ut headeren
@@ -37,14 +37,14 @@ def client(ip, port, file, reli, test_case):
     syn, ack, fin = parse_flags(flags) # tar ut flaggene
     if flags == (8 | 4): # 8 | 4 = syn og ack flag
         print("syn-ack pakke mottatt")
-        data = b'' # ingen data i ack pakken
+        data = b'' # no data in the ack packet
         flags = 4
-        ackPacket = create_packet(0, 1, flags, 0, data) # lager en ack pakke
-        clientSocket.sendto(ackPacket, serverAddr) # sender ack pakken
+        ackPacket = create_packet(0, 1, flags, 0, data) # creating the ack packet
+        clientSocket.sendto(ackPacket, serverAddr) # sending ack packet
 
 
     if reli == 'stop_and_wait':
-        stop_and_wait(clientSocket, file, serverAddr) # sender clientsocket, filen og serveradressen til stop and wait funktionen
+        stop_and_wait(clientSocket, file, serverAddr) # sending clientsocket, file and serveraddress
 
     elif reli == 'GBN':
         GBN(clientSocket, serverAddr, file, test_case)
@@ -52,7 +52,7 @@ def client(ip, port, file, reli, test_case):
     elif reli == 'SR':
         send_SR(clientSocket, serverAddr, file, test_case)
 
-    clientSocket.close() # lukker client socket, Men er det her vi vil lukke den...
+    clientSocket.close() # closing the client socket
 
 def server(ip, port, reli, test_case):
     addr = (ip, port)
@@ -138,10 +138,9 @@ def server(ip, port, reli, test_case):
                 if handle_test_case(test_case, serverSocket):
                     continue # hvis vi skal skippe en pakke så går vi tilbake til starten av while løkken
                 ack = create_packet(seq, acknowledgment_number, flags, window, b'')
-                #print ('sending ack')
                 serverSocket.sendto(ack, addr) # send the packet to the client
                 
-                if finflag == 2:
+                if finflag == 2: # checking if the finflag is set.
                     print("received fin packet")
                     end_time = time.time()
                     elapsed_time = end_time - start_time
@@ -155,7 +154,7 @@ def check_ip(addres):
     try:
         ipValue = str(addres)
     except:
-        raise argparse.ArgumentError('must be different format')
+        raise argparse.ArgumentError(None, 'must be different format')
     #https://www.abstractapi.com/guides/python-regex-ip-address
     match = re.match(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", ipValue)
     if not match:
