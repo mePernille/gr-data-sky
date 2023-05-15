@@ -14,7 +14,6 @@ from DRTP import handle_test_case
 from DRTP import wait_for_ack
 from DRTP import send_SR
 
-
 def client(ip, port, file, reli, test_case):
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Creating a UDP socket
     clientSocket.settimeout(0.5) # 500 ms timeout
@@ -36,7 +35,7 @@ def client(ip, port, file, reli, test_case):
     seq, ack, flags, win = unpack(header_format, header)
     syn, ack, fin = parse_flags(flags) # tar ut flaggene
     if flags == (8 | 4): # 8 | 4 = syn og ack flag
-        print("syn-ack pakke mottatt")
+        #print("syn-ack pakke mottatt")
         data = b'' # no data in the ack packet
         flags = 4
         ackPacket = create_packet(0, 1, flags, 0, data) # creating the ack packet

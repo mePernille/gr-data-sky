@@ -85,9 +85,11 @@ def stop_and_wait(clientSocket, file, serverAddr): # taking in the socket to sen
         clientSocket.sendto(fin_packet, serverAddr)
         end_time = time.time()
         elapsed_time = end_time - start_time
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
         bytes_sent = seq_number * 1460
         bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
+        print(f"elapsed time: {'{:.3f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
 
             
 def wait_for_ack(clientSocket, expected_ack, serverAddr):
@@ -165,9 +167,11 @@ def GBN(clientSocket, serverAddr, file, test_case):
         #print("Sent fin packet")
         end_time = time.time()
         elapsed_time = end_time - start_time
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
         bytes_sent = seq_number * 1460
         bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
+        print(f"elapsed time: {'{:.3f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
 
     clientSocket.close()    
 
@@ -176,9 +180,6 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
     # Den mottar ikke ack 21 men det kommer ingen feilmelding og den fortsetter å sende pakke 25
     # på test case loss mottar den ikke ack 21, men det kommer ingen feilmelding.
     # Server mottar alle pakker
-    start_time = time.time()
-    elapsed_time = 0
-    bytes_sent = 0
     received_packets = {first_seq: first_data}
     fin_received = False
 
@@ -192,11 +193,6 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
         if finflag == 2:
             fin_received = True
             #print("Fin received")
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            bytes_sent = seq * 1460
-            bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-            print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
             break
 
         if seq not in received_packets:
@@ -284,6 +280,8 @@ def send_SR(clientSocket, serverAddr, file, test_case):
         #print("Sent fin packet")
         end_time = time.time()
         elapsed_time = end_time - start_time
+        if elapsed_time == 0:
+            elapsed_time = 0.0001
         bytes_sent = seq_number * 1460
         bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
-        print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
+        print(f"elapsed time: {'{:.3f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
