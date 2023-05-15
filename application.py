@@ -241,16 +241,25 @@ def main():
     # Parsing the arguments
     args = parser.parse_args()
 
+    server_reli = None
+
     # Checking the user inputs
     # If the user entered -s, run the server    
     if args.server:
+        server_reli = args.reliability
         serverSocket = server(args.ip, args.port, args.reliability, args.test_case)
         # If the user entered a test case, call handle_test_case
         if args.test_case:
             handle_test_case(args.test_case, serverSocket)
     # If the user entered -c, run the client
     elif args.client:
+        client_reli = args.reliability
         clientSocket = client(args.ip, args.port, args.file, args.reliability, args.test_case)
+        # Checking if the client and server are using the same reliability protocol
+        # This does not work at the moment
+        if client_reli != server_reli: 
+            print("The client and server must use the same reliability protocol")
+            sys.exit()
         # If the user entered a test case, call handle_test_case
         if args.test_case:
             handle_test_case(args.test_case, clientSocket)
