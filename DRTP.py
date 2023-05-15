@@ -158,7 +158,6 @@ def GBN(clientSocket, serverAddr, file, test_case):
     clientSocket.close()    
 
 def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
-    # Sender fin flag, men mottar ikke fin flag
     # Skip ack printer skip ack, og den hopper over ack 21.
     # Den mottar ikke ack 21 men det kommer ingen feilmelding og den fortsetter å sende pakke 25
     # på test case loss mottar den ikke ack 21, men det kommer ingen feilmelding.
@@ -197,4 +196,66 @@ def SR(serverSocket, first_data, first_seq, finflag, output_file, test_case):
             f.write(received_packets[seq])
         received_seq_list = sorted(received_packets.keys())
         print("Liste over nr:", received_seq_list)
-        print("All packets received")
+        #print("All packets received")
+
+def send_SR(clientSocket, serverAddr, file, test_case):
+    # Sender filen, men når jeg kjører skip_ack så hopper den bare over ack 21 uten å 
+    # gå inn i else: resending. 
+    global start
+
+    with open(file, 'rb') as f:
+        seq_number = 1
+        ack_number = 0
+        window = 5
+        flags = 0
+        unacked_packets = {}
+
+        start = 1
+        data = None
+
+        # Initially fill the window
+        while len(unacked_packets) < window:
+            data = f.read(1460)
+            if not data:
+                break
+            packet = create_packet(seq_number, ack_number, flags, window, data)
+            unacked_packets[seq_number] = packet
+            clientSocket.sendto(packet, serverAddr)
+            print(f"packet {seq_number} sent")
+            print("Current unacked_packets:", list(unacked_packets.keys()))
+            seq_number += 1
+
+        # Start sliding the window
+        while True:
+            if wait_for_ack(clientSocket, start, serverAddr):
+                del unacked_packets[start]
+                start += 1
+                ack_number += 1
+
+                # Read new data and send new packet after receiving an ACK
+                data = f.read(1460)
+                if data:
+                    packet = create_packet(seq_number, ack_number, flags, window, data)
+                    unacked_packets[seq_number] = packet
+                    clientSocket.sendto(packet, serverAddr)
+                    print(f"packet {seq_number} sent")
+                    print("Current unacked_packets:", list(unacked_packets.keys()))
+                    seq_number += 1
+            else:
+                print("resending")
+                if start in unacked_packets:
+                    packet = unacked_packets[start]
+                    clientSocket.sendto(packet, serverAddr)
+                    print(f"packet {start} sent")
+                    print("Current unacked_packets:", list(unacked_packets.keys()))
+                    seq_number = (start + window)
+
+
+            # Break the loop when the file is fully read 
+            if not data:
+                break
+
+        flags = 2  # fin flag
+        fin_packet = create_packet(seq_number, ack_number, flags, window, b'')
+        clientSocket.sendto(fin_packet, serverAddr)
+        print("Sent fin packet")
