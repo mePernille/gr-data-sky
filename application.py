@@ -75,6 +75,9 @@ def server(ip, port, reli, test_case):
     received_seq = set() # keep track of received sequence numbers
 
     while True:
+        start_time = time.time()
+        elapsed_time = 0
+        bytes_sent = 0
         msg, addr = serverSocket.recvfrom(1472)
         header_from_msg = msg[:12]
         data = msg[12:]
@@ -140,6 +143,11 @@ def server(ip, port, reli, test_case):
                 
                 if finflag == 2:
                     print("received fin packet")
+                    end_time = time.time()
+                    elapsed_time = end_time - start_time
+                    bytes_sent = seq * 1460
+                    bandwidth = ((bytes_sent / 1000000) / elapsed_time) * 8
+                    print(f"elapsed time: {'{:.2f}'.format(elapsed_time)} seconds, bytes sent: {bytes_sent} bytes, bandwidth: {'{:.2f}'.format(bandwidth)} Mbit/s")
                     break
     
 
