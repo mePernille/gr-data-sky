@@ -207,7 +207,7 @@ def GBN(clientSocket, serverAddr, file, test_case):
                     # Incrementing the seq number
                     seq_number += 1
 
-                # If wait_for_ack returns True, we delete the packet from the list
+                # If wait_for_ack returns True, we move the window
                 if wait_for_ack(clientSocket, seq_number, serverAddr) == True:
                     # Increment start to move the window
                     start +=1
