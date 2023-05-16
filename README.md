@@ -21,7 +21,7 @@ to run the client
 -f specify the filename you will be transferring, there is a picture of a dog in the applications ready to be transferred.  
 -t specify the SAME test case as the server is running in  
 
-The sender/client can be invoked with:    
+The client/sender can be invoked with:    
 python3 application.py -c -i <ip_address> -p <port_number> -r <reliable_method>  
 With test cases:  
 python3 application.py -c -i <ip_address> -p <port_number> -r <reliable_method> -t <test_case> 
